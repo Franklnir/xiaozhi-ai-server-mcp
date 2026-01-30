@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login - SciG Mode MCP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: radial-gradient(1200px 600px at 20% 10%, #1d4ed8 0%, transparent 60%),
+                   radial-gradient(900px 500px at 80% 20%, #7c3aed 0%, transparent 55%),
+                   #0b1220; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-md bg-white/10 backdrop-blur border border-white/15 rounded-2xl shadow-2xl p-8 text-white">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold">SciG Mode MCP</h1>
+      <p class="text-sm text-white/70">Login untuk masuk Dashboard / Admin.</p>
+    </div>
+
+    <form method="POST" action="/login" class="space-y-4">
+      <div>
+        <label class="block text-sm text-white/80 mb-1">Username</label>
+        <input type="text" name="username" required
+          class="w-full bg-black/30 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+
+      <div>
+        <label class="block text-sm text-white/80 mb-1">Password</label>
+        <input type="password" name="password" required
+          class="w-full bg-black/30 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+
+      <button type="submit"
+        class="w-full py-2.5 rounded-xl font-semibold bg-blue-600 hover:bg-blue-500 transition">
+        Login
+      </button>
+    </form>
+
+    <div class="mt-6 text-sm text-white/80">
+      Belum punya akun?
+      <a href="/register" class="text-blue-300 hover:text-blue-200 underline underline-offset-4">Register di sini</a>
+    </div>
+
+    {% if error %}
+      <div class="mt-5 p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-100 text-sm">
+        {{ error }}
+      </div>
+    {% endif %}
+
+    <div class="mt-6 text-xs text-white/60">
+      Tips: pastikan <span class="font-mono">DATABASE_URL</span> sudah benar di <span class="font-mono">.env</span>.
+    </div>
+  </div>
+</body>
+</html>

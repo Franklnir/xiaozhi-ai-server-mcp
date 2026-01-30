@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - SciG Mode MCP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background:
+        radial-gradient(1100px 550px at 15% 10%, #7c3aed 0%, transparent 55%),
+        radial-gradient(900px 500px at 85% 20%, #06b6d4 0%, transparent 55%),
+        #0b1220;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen p-4 text-white">
+  <div class="max-w-6xl mx-auto space-y-4">
+
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-bold">Admin Panel</h1>
+        <p class="text-sm text-white/70">Kelola code & token MCP, termasuk unclaim agar bisa dipakai user baru.</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div class="text-sm text-white/80">
+          Login sebagai <span class="font-semibold">{{ username }}</span>
+        </div>
+        <a href="/logout"
+           class="px-3 py-2 rounded-xl bg-white/10 border border-white/15 hover:bg-white/15 transition text-sm">
+          Logout
+        </a>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <!-- Create code -->
+      <div class="lg:col-span-1 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur">
+        <h2 class="font-semibold mb-2">Buat Code Baru</h2>
+        <p class="text-xs text-white/70 mb-3">
+          Isi dengan URL MCP endpoint (contoh: <span class="font-mono">wss://api.xiaozhi.me/mcp/?token=...</span>)
+        </p>
+
+        <form method="POST" action="/admin/codes" class="space-y-3">
+          <div>
+            <label class="block text-xs text-white/70 mb-1">Token / WS URL</label>
+            <textarea name="token" required rows="4"
+              class="w-full bg-black/25 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-400"
+              placeholder="wss://api.xiaozhi.me/mcp/?token=..."></textarea>
+          </div>
+          <button class="w-full py-2.5 rounded-xl font-semibold bg-cyan-600 hover:bg-cyan-500 transition">
+            Buat Code
+          </button>
+        </form>
+      </div>
+
+      <!-- List codes -->
+      <div class="lg:col-span-2 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="font-semibold">Daftar Codes</h2>
+          <div class="w-full max-w-xs">
+            <input id="search" type="text"
+              class="w-full bg-black/25 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
+              placeholder="Cari: code / username / token…">
+          </div>
+        </div>
+
+        <div class="mt-4 overflow-x-auto rounded-xl border border-white/10">
+          <table class="min-w-full text-sm" id="codesTable">
+            <thead class="bg-black/25 text-white/80">
+              <tr>
+                <th class="text-left px-3 py-2">Code</th>
+                <th class="text-left px-3 py-2">Owner</th>
+                <th class="text-left px-3 py-2">Token</th>
+                <th class="text-left px-3 py-2">Status</th>
+                <th class="text-left px-3 py-2">Aksi</th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-white/10">
+              {% for c in codes %}
+              <tr class="codeRow">
+                <td class="px-3 py-2 align-top">
+                  <div class="font-mono font-semibold">{{ c.code }}</div>
+                  <div class="text-xs text-white/60">id={{ c.id }} • {{ c.created_at }}</div>
+                </td>
+
+                <td class="px-3 py-2 align-top">
+                  {% if c.used_by_username %}
+                    <div class="font-semibold">{{ c.used_by_username }}</div>
+                    <div class="text-xs text-white/60">used_by={{ c.used_by }}</div>
+                  {% else %}
+                    <div class="text-white/70">Belum di-claim</div>
+                  {% endif %}
+                </td>
+
+                <td class="px-3 py-2 align-top">
+                  <div class="flex items-start gap-2">
+                    <div class="font-mono text-xs break-all max-w-md">
+                      <span class="tokenMasked">
+                        {% if c.token %}
+                          {{ c.token[:24] }}…{{ c.token[-10:] }}
+                        {% else %}
+                          (empty)
+                        {% endif %}
+                      </span>
+                      <span class="tokenFull hidden">{{ c.token or "" }}</span>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                      <button type="button"
+                        class="toggleToken px-2 py-1 rounded-lg bg-white/10 border border-white/15 hover:bg-white/15 transition text-xs">
+                        Show
+                      </button>
+                      <button type="button"
+                        class="copyToken px-2 py-1 rounded-lg bg-white/10 border border-white/15 hover:bg-white/15 transition text-xs">
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                </td>
+
+                <td class="px-3 py-2 align-top">
+                  {% set connected = (c.is_connected or 0) %}
+                  {% if connected %}
+                    <div class="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-200 text-xs">
+                      <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Connected
+                    </div>
+                    <div class="text-xs text-white/60 mt-1">last_ok: {{ c.last_ok_at or "-" }}</div>
+                  {% else %}
+                    <div class="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-200 text-xs">
+                      <span class="w-2 h-2 rounded-full bg-amber-400"></span> Not connected
+                    </div>
+                    <div class="text-xs text-white/60 mt-1">last_err: {{ c.last_err_at or "-" }}</div>
+                    {% if c.last_error %}
+                      <div class="mt-1 text-xs text-red-200/90 bg-red-500/10 border border-red-400/20 rounded-lg p-2">
+                        {{ c.last_error }}
+                      </div>
+                    {% endif %}
+                  {% endif %}
+                </td>
+
+                <td class="px-3 py-2 align-top">
+                  <div class="flex flex-col gap-2">
+                    <form method="POST" action="/admin/codes/unclaim" class="unclaimForm">
+                      <input type="hidden" name="code_id" value="{{ c.id }}">
+                      <button type="submit"
+                        class="w-full px-3 py-2 rounded-xl bg-amber-600/80 hover:bg-amber-500 transition text-xs font-semibold">
+                        Unclaim
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <p class="text-xs text-white/60 mt-3">
+          Unclaim akan melepas <span class="font-mono">used_by</span> dan reset status koneksi, sehingga code bisa dipakai user baru.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Search filter (by code / username / token / status)
+    const search = document.getElementById("search");
+    const rows = Array.from(document.querySelectorAll(".codeRow"));
+
+    search.addEventListener("input", () => {
+      const q = (search.value || "").toLowerCase().trim();
+      rows.forEach(r => {
+        const text = r.innerText.toLowerCase();
+        r.style.display = text.includes(q) ? "" : "none";
+      });
+    });
+
+    // Toggle token + copy
+    document.querySelectorAll(".codeRow").forEach(row => {
+      const btnToggle = row.querySelector(".toggleToken");
+      const btnCopy = row.querySelector(".copyToken");
+      const masked = row.querySelector(".tokenMasked");
+      const full = row.querySelector(".tokenFull");
+
+      btnToggle?.addEventListener("click", () => {
+        const isHidden = full.classList.contains("hidden");
+        if (isHidden) {
+          full.classList.remove("hidden");
+          masked.classList.add("hidden");
+          btnToggle.textContent = "Hide";
+        } else {
+          full.classList.add("hidden");
+          masked.classList.remove("hidden");
+          btnToggle.textContent = "Show";
+        }
+      });
+
+      btnCopy?.addEventListener("click", async () => {
+        const tokenText = (full?.textContent || "").trim();
+        if (!tokenText) return;
+
+        try {
+          await navigator.clipboard.writeText(tokenText);
+          btnCopy.textContent = "Copied!";
+          setTimeout(() => btnCopy.textContent = "Copy", 900);
+        } catch (e) {
+          btnCopy.textContent = "Fail";
+          setTimeout(() => btnCopy.textContent = "Copy", 900);
+        }
+      });
+
+      // confirm unclaim
+      const unclaimForm = row.querySelector(".unclaimForm");
+      unclaimForm?.addEventListener("submit", (e) => {
+        if (!confirm("Unclaim code ini? Code akan bisa dipakai user baru.")) {
+          e.preventDefault();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

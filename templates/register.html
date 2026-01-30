@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - SciG Mode MCP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background:
+        radial-gradient(1100px 550px at 10% 15%, #16a34a 0%, transparent 55%),
+        radial-gradient(900px 500px at 85% 20%, #2563eb 0%, transparent 55%),
+        #0b1220;
+    }
+
+    @keyframes pulseRing {
+      0% { transform: scale(0.9); opacity: 0.35; }
+      70% { transform: scale(1.25); opacity: 0; }
+      100% { transform: scale(1.25); opacity: 0; }
+    }
+
+    @keyframes spinFast {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4 text-white">
+  <div class="w-full max-w-md bg-white/10 backdrop-blur border border-white/15 rounded-2xl shadow-2xl p-8">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold">Register Akun</h1>
+      <p class="text-sm text-white/70">
+        Admin atau User (claim token MCP via kode 8 digit, dilakukan saat register).
+      </p>
+    </div>
+
+    <form method="POST" action="/register" class="space-y-4" id="regForm">
+      <div>
+        <label class="block text-sm text-white/80 mb-1">Username</label>
+        <input type="text" name="username" required id="username"
+          class="w-full bg-black/30 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400">
+      </div>
+
+      <div>
+        <label class="block text-sm text-white/80 mb-1">Password</label>
+        <input type="password" name="password" required id="password"
+          class="w-full bg-black/30 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400">
+      </div>
+
+      <div>
+        <label class="block text-sm text-white/80 mb-1">Konfirmasi Password</label>
+        <input type="password" name="confirm_password" required id="confirm_password"
+          class="w-full bg-black/30 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400">
+        <p class="text-xs mt-1 hidden" id="pwHint"></p>
+      </div>
+
+      <div>
+        <label class="block text-sm text-white/80 mb-1">Kode</label>
+
+        <div class="relative">
+          <input type="text" name="code" required maxlength="32" id="code"
+            class="w-full bg-black/30 border border-white/15 rounded-xl px-3 py-2 pr-28 outline-none focus:ring-2 focus:ring-emerald-400"
+            placeholder="8 digit (user) atau admin master code">
+
+          <!-- status capsule -->
+          <div class="absolute top-1/2 -translate-y-1/2 right-2 flex items-center gap-2">
+            <!-- pairing animation -->
+            <div class="relative w-6 h-6 hidden" id="pairingAnim" aria-hidden="true">
+              <div class="absolute inset-0 rounded-full border border-emerald-300/70"></div>
+              <div class="absolute inset-0 rounded-full border border-emerald-300/70" style="animation: pulseRing 1.1s infinite;"></div>
+              <div class="absolute inset-1 rounded-full border-2 border-emerald-400/70 border-t-transparent"
+                   style="animation: spinFast 0.75s linear infinite;"></div>
+            </div>
+
+            <span id="codeBadge"
+              class="text-xs px-2.5 py-1 rounded-full border border-white/15 bg-black/25 text-white/70">
+              Belum dicek
+            </span>
+          </div>
+        </div>
+
+        <p class="text-xs text-white/60 mt-1 leading-relaxed">
+          • Admin master code: <span class="font-mono font-semibold">{{ admin_code }}</span><br/>
+          • User code: minta ke admin (kode 8 digit pemilik token MCP, berlaku selamanya)
+        </p>
+
+        <p class="text-xs mt-2 text-white/70" id="codeHint"></p>
+      </div>
+
+      <button type="submit" id="btnRegister" disabled
+        class="w-full py-2.5 rounded-xl font-semibold transition
+               bg-emerald-600/40 text-white/60 cursor-not-allowed
+               disabled:opacity-100 disabled:shadow-none">
+        Register (pairing dulu…)
+      </button>
+    </form>
+
+    <div class="mt-6 text-sm text-white/80">
+      Sudah punya akun?
+      <a href="/login" class="text-blue-300 hover:text-blue-200 underline underline-offset-4">
+        Login di sini
+      </a>
+    </div>
+
+    {% if error %}
+      <div class="mt-5 p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-100 text-sm">
+        {{ error }}
+      </div>
+    {% endif %}
+  </div>
+
+  <script>
+    const elCode = document.getElementById("code");
+    const elBadge = document.getElementById("codeBadge");
+    const elHint = document.getElementById("codeHint");
+    const elPair = document.getElementById("pairingAnim");
+    const btn = document.getElementById("btnRegister");
+
+    const pw = document.getElementById("password");
+    const pw2 = document.getElementById("confirm_password");
+    const pwHint = document.getElementById("pwHint");
+    const username = document.getElementById("username");
+
+    let codeOk = false;
+    let pwOk = false;
+    let userOk = false;
+    let debounce = null;
+
+    function setBtnState() {
+      userOk = (username.value || "").trim().length > 0;
+      const ok = codeOk && pwOk && userOk;
+
+      if (ok) {
+        btn.disabled = false;
+        btn.className = "w-full py-2.5 rounded-xl font-semibold bg-emerald-600 hover:bg-emerald-500 transition";
+        btn.textContent = "Register";
+      } else {
+        btn.disabled = true;
+        btn.className = "w-full py-2.5 rounded-xl font-semibold transition bg-emerald-600/40 text-white/60 cursor-not-allowed disabled:opacity-100 disabled:shadow-none";
+        btn.textContent = "Register (pairing dulu…)";
+      }
+    }
+
+    function setBadge(kind, text) {
+      // kind: idle | checking | ok | bad | used
+      if (kind === "checking") {
+        elBadge.className = "text-xs px-2.5 py-1 rounded-full border border-white/15 bg-black/25 text-white/80";
+      } else if (kind === "ok") {
+        elBadge.className = "text-xs px-2.5 py-1 rounded-full border border-emerald-400/40 bg-emerald-500/15 text-emerald-200";
+      } else if (kind === "used") {
+        elBadge.className = "text-xs px-2.5 py-1 rounded-full border border-amber-400/40 bg-amber-500/15 text-amber-200";
+      } else if (kind === "bad") {
+        elBadge.className = "text-xs px-2.5 py-1 rounded-full border border-red-400/40 bg-red-500/15 text-red-200";
+      } else {
+        elBadge.className = "text-xs px-2.5 py-1 rounded-full border border-white/15 bg-black/25 text-white/70";
+      }
+      elBadge.textContent = text;
+    }
+
+    function checkPw() {
+      const a = pw.value || "";
+      const b = pw2.value || "";
+      if (!a || !b) {
+        pwOk = false;
+        pwHint.classList.add("hidden");
+        setBtnState();
+        return;
+      }
+      if (a !== b) {
+        pwOk = false;
+        pwHint.textContent = "Password dan konfirmasi tidak sama.";
+        pwHint.className = "text-xs mt-1 text-red-200";
+        pwHint.classList.remove("hidden");
+      } else {
+        pwOk = true;
+        pwHint.textContent = "Password cocok ✅";
+        pwHint.className = "text-xs mt-1 text-emerald-200";
+        pwHint.classList.remove("hidden");
+      }
+      setBtnState();
+    }
+
+    async function validateCodeNow() {
+      const code = (elCode.value || "").trim();
+      codeOk = false;
+      elHint.textContent = "";
+
+      if (!code) {
+        elPair.classList.add("hidden");
+        setBadge("idle", "Belum dicek");
+        setBtnState();
+        return;
+      }
+
+      elPair.classList.remove("hidden");
+      setBadge("checking", "Pairing…");
+
+      try {
+        const res = await fetch(`/api/public/validate-code?code=${encodeURIComponent(code)}`);
+        const data = await res.json();
+
+        // data: { ok, kind, available, message }
+        elPair.classList.add("hidden");
+
+        if (!data.ok) {
+          codeOk = false;
+          setBadge("bad", "Invalid");
+          elHint.textContent = data.message || "Kode tidak valid.";
+          elHint.className = "text-xs mt-2 text-red-200";
+          setBtnState();
+          return;
+        }
+
+        if (data.kind === "admin") {
+          // admin master code
+          codeOk = true;
+          setBadge("ok", "Admin OK");
+          elHint.textContent = "Admin master code valid. Akun akan jadi Admin.";
+          elHint.className = "text-xs mt-2 text-emerald-200";
+          setBtnState();
+          return;
+        }
+
+        // user code
+        if (data.available) {
+          codeOk = true;
+          setBadge("ok", "Paired ✅");
+          elHint.textContent = "Kode valid dan tersedia. Akan di-claim saat register.";
+          elHint.className = "text-xs mt-2 text-emerald-200";
+        } else {
+          codeOk = false;
+          setBadge("used", "Sudah dipakai");
+          elHint.textContent = data.message || "Kode sudah di-claim.";
+          elHint.className = "text-xs mt-2 text-amber-200";
+        }
+        setBtnState();
+      } catch (e) {
+        elPair.classList.add("hidden");
+        codeOk = false;
+        setBadge("bad", "Error");
+        elHint.textContent = "Gagal cek kode (server error).";
+        elHint.className = "text-xs mt-2 text-red-200";
+        setBtnState();
+      }
+    }
+
+    elCode.addEventListener("input", () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(validateCodeNow, 350);
+    });
+
+    pw.addEventListener("input", checkPw);
+    pw2.addEventListener("input", checkPw);
+    username.addEventListener("input", () => setBtnState());
+
+    // init
+    setBtnState();
+  </script>
+</body>
+</html>

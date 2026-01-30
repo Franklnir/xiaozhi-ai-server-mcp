@@ -4,28 +4,79 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SciG Mode Dashboard - Realtime</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body{background:#0b1220;color:#e5e7eb}
-    .card{background:rgba(15,23,42,.75);border:1px solid rgba(255,255,255,.10);border-radius:1rem}
+    :root{
+      --bg:#0a1224;
+      --panel:rgba(15,23,42,.78);
+      --panel-border:rgba(255,255,255,.10);
+      --muted:#94a3b8;
+      --accent:#3b82f6;
+    }
+    body{
+      font-family:"Space Grotesk",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(1200px 700px at 15% -10%, rgba(37,99,235,.35), transparent 60%),
+        radial-gradient(900px 600px at 85% 10%, rgba(20,184,166,.25), transparent 55%),
+        var(--bg);
+      color:#e5e7eb;
+    }
+    .card{background:var(--panel);border:1px solid var(--panel-border);border-radius:1rem}
     .inp{background:rgba(2,6,23,.7);border:1px solid rgba(255,255,255,.10);border-radius:.75rem;padding:.6rem .75rem;width:100%}
     .btn{border-radius:.75rem;padding:.55rem .9rem;font-weight:700}
-    .muted{color:#94a3b8}
+    .muted{color:var(--muted)}
     .chip{border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:.2rem .6rem;font-size:12px}
-    .bubble{border:1px solid rgba(255,255,255,.10);border-radius:1rem;padding:.6rem .8rem;white-space:pre-wrap}
     .thin{scrollbar-width:thin}
+
+    /* Telegram-like chat */
+    .chat-shell{
+      background:
+        radial-gradient(circle at 12px 12px, rgba(148,163,184,.14) 1px, transparent 1px),
+        radial-gradient(circle at 4px 4px, rgba(148,163,184,.10) 1px, transparent 1px),
+        #eef2f7;
+      background-size: 24px 24px, 12px 12px;
+      border:1px solid #dbe3ee;
+      border-radius:18px;
+    }
+    .msg-row{display:flex;gap:10px;margin:12px 0;align-items:flex-end}
+    .msg-row.user{justify-content:flex-end}
+    .msg-row.assistant{justify-content:flex-start}
+    .msg-avatar{
+      width:28px;height:28px;border-radius:999px;
+      display:flex;align-items:center;justify-content:center;
+      background:#c7d2fe;color:#1e1b4b;font-weight:700;font-size:12px;
+      box-shadow:0 2px 6px rgba(15,23,42,.12);
+    }
+    .msg-bubble{
+      max-width:74%;
+      padding:10px 12px;
+      white-space:pre-wrap;word-break:break-word;
+      box-shadow:0 6px 16px rgba(15,23,42,.08);
+      border:1px solid transparent;
+    }
+    .msg-row.user .msg-bubble{
+      background:#d7f0ff;border-color:#b6ddff;border-radius:16px 16px 6px 16px;
+    }
+    .msg-row.assistant .msg-bubble{
+      background:#ffffff;border-color:#e2e8f0;border-radius:16px 16px 16px 6px;
+    }
+    .msg-name{font-weight:600;font-size:11px;color:#334155;margin-bottom:4px}
+    .msg-meta{margin-top:6px;font-size:10px;color:#64748b;text-align:right}
   </style>
 </head>
 
 <body class="min-h-screen">
   <!-- Top bar -->
-  <header class="sticky top-0 z-10 border-b border-white/10 bg-slate-950/60 backdrop-blur">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+  <header class="sticky top-0 z-10 border-b border-white/10 bg-slate-950/70 backdrop-blur">
+    <div class="max-w-[1500px] w-full mx-auto px-4 py-4 flex items-center justify-between gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-extrabold text-blue-300">
           SciG Mode Dashboard <span class="chip ml-2 text-emerald-200 bg-emerald-500/10">REALTIME</span>
         </h1>
-        <div class="text-xs muted mt-1">PSID hanya: default + psid_1..psid_4. Device lain masuk “default”.</div>
+        <div class="text-xs muted mt-1">PSID hanya: default + psid_1..psid_4. Device lain masuk "default".</div>
       </div>
 
       <div class="flex items-center gap-3">
@@ -36,7 +87,7 @@
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+  <main class="max-w-[1500px] w-full mx-auto p-4 md:p-8 space-y-6">
 
     <!-- Quick info -->
     <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -60,7 +111,7 @@
         <div class="mt-4 border-t border-white/10 pt-4">
           <div class="text-xs muted mb-2">Tips</div>
           <div class="text-xs text-slate-300">
-            Kalau Xiaozhi sudah connect tapi PSID salah, set PSID lalu apply mode. Server akan auto-route last physical → PSID.
+            Kalau Xiaozhi sudah connect tapi PSID salah, set PSID lalu apply mode. Server akan auto-route last physical ke PSID.
           </div>
         </div>
       </div>
@@ -68,9 +119,9 @@
       <div class="card p-4 md:col-span-2">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <div class="text-sm font-bold">🔑 My MCP Codes</div>
+            <div class="text-sm font-bold">My MCP Codes</div>
             <div class="text-xs muted mt-1">
-              Daftar kode & token MCP yang sudah kamu miliki.
+              Daftar kode MCP yang sudah kamu miliki.
               <span class="text-amber-200">Claim tidak tersedia di dashboard</span> (claim hanya lewat halaman Register).
             </div>
           </div>
@@ -84,7 +135,7 @@
           </div>
           <div id="myCodes" class="mt-3 space-y-2 text-sm"></div>
           <div class="mt-3 text-xs muted">
-            Butuh claim? Silakan register user baru dengan code 8 digit (claim otomatis saat register). Admin bisa “Unclaim” dari halaman Admin bila perlu.
+            Butuh claim? Silakan register user baru dengan code 10 karakter (claim otomatis saat register). Admin bisa "Unclaim" dari halaman Admin bila perlu.
           </div>
         </div>
       </div>
@@ -102,8 +153,9 @@
 
       <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label class="text-xs muted">PSID</label>
-          <select id="psidSelect" class="inp text-sm" onchange="onPsidChanged()"></select>
+          <label class="text-xs muted">PSID (otomatis dari mode)</label>
+          <select id="psidSelect" class="inp text-sm" disabled></select>
+          <div class="text-[11px] muted mt-1">PSID tidak bisa dipilih manual. Ikuti mode.</div>
         </div>
 
         <div>
@@ -149,7 +201,7 @@
     <section class="card p-4">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <div class="text-sm font-bold">🧠 Mode Editor</div>
+          <div class="text-sm font-bold">Mode Editor</div>
           <div class="text-xs muted mt-1">
             Edit title & introduction.
             (Kalau mau profesional: batasi API edit mode hanya untuk admin.)
@@ -190,7 +242,7 @@
     </section>
 
     <!-- Chat -->
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-4">
       <!-- Threads -->
       <div class="card p-4">
         <div class="flex items-center justify-between">
@@ -198,9 +250,6 @@
             <div class="text-sm font-bold">Threads</div>
             <div class="text-xs muted mt-1">List chat untuk PSID terpilih.</div>
           </div>
-          <button class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-sm" onclick="newChat()">
-            + New
-          </button>
         </div>
 
         <div class="mt-3 flex items-center gap-2">
@@ -213,32 +262,24 @@
       </div>
 
       <!-- Messages -->
-      <div class="card p-4 lg:col-span-2">
-        <div class="flex items-start justify-between gap-3">
+      <div class="card p-4 xl:col-span-2">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <div class="text-sm font-bold">Messages</div>
-            <div class="text-xs muted mt-1">
-              Thread: <span class="font-mono text-xs" id="activeThread">-</span>
-              <span class="ml-2 chip bg-slate-900/60" id="modeBadge">Mode: -</span>
+            <div class="text-xs muted mt-1 flex flex-wrap items-center gap-2">
+              <span>Thread: <span class="font-mono text-xs" id="activeThread">-</span></span>
+              <span class="chip bg-slate-900/60" id="chatPsidBadge">PSID: -</span>
+              <span class="chip bg-slate-900/60" id="modeBadge">Mode: -</span>
+              <span class="chip bg-slate-900/60" id="threadModeBadge">Thread Mode: -</span>
             </div>
           </div>
-          <div class="flex gap-2">
-            <button class="btn bg-slate-800 hover:bg-slate-700 text-white text-sm" onclick="loadOlder()">Load older</button>
-            <button class="btn bg-red-600 hover:bg-red-500 text-white text-sm" onclick="deleteThread()">Delete</button>
-          </div>
+          <div class="text-xs muted">Realtime view (30 hari terakhir)</div>
         </div>
 
-        <div id="messages" class="mt-4 space-y-3 max-h-[520px] overflow-auto pr-1 thin"></div>
+        <div id="messages" class="mt-4 max-h-[640px] overflow-auto pr-1 thin chat-shell p-3"></div>
 
         <div class="mt-4 border-t border-white/10 pt-4">
-          <div class="text-xs muted mb-2">Kirim pesan (hanya mode NORMAL)</div>
-          <div class="grid grid-cols-1 md:grid-cols-6 gap-2">
-            <textarea id="msgInput" rows="2" class="inp md:col-span-5 text-sm" placeholder="Tulis pesan..."></textarea>
-            <button id="sendBtn" class="btn bg-blue-600 hover:bg-blue-500 text-white md:col-span-1" onclick="sendMsg()">
-              Send
-            </button>
-          </div>
-          <div id="sendHint" class="text-xs muted mt-2"></div>
+          <div class="text-xs muted">Tampilan ini hanya untuk memantau realtime chat Xiaozhi.</div>
         </div>
       </div>
     </section>
@@ -257,14 +298,17 @@
 
   let CONFIG = null;
   let MODES = [];
+  let MODE_PSID_MAP = {};
   let CURRENT_PSID = "default";
   let ACTIVE_MODE = null;
+  let AUTO_SYNC_PSID = true;
+  let AUTO_FOLLOW_THREAD = true;
 
   let THREADS = [];
   let ACTIVE_THREAD_ID = null;
+  let ACTIVE_THREAD_MODE = null;
 
-  // For pagination: before_id should be current smallest message id on screen
-  let SMALLEST_MSG_ID = null;
+  let SUPPRESS_MODE_CHANGE = false;
 
   // ------------------------
   // Helpers
@@ -317,12 +361,7 @@
     setTimeout(() => { try { el.remove(); } catch(e){} }, 2400);
   }
 
-  function maskToken(s) {
-    const t = (s || "").trim();
-    if (!t) return "(empty)";
-    if (t.length <= 40) return t;
-    return t.slice(0, 24) + "…" + t.slice(-10);
-  }
+  // token display intentionally hidden in dashboard
 
   // ------------------------
   // WebSocket
@@ -362,10 +401,14 @@
     if (!msg || !msg.type) return;
 
     if (msg.type === "chat_message_sent") {
-      if (msg.device_id === CURRENT_PSID && msg.thread_id === ACTIVE_THREAD_ID) {
-        loadMessages({ replace: true, keepBottom: true });
-      }
       if (msg.device_id === CURRENT_PSID) {
+        if (AUTO_FOLLOW_THREAD && msg.thread_id && msg.thread_id !== ACTIVE_THREAD_ID) {
+          selectThread(msg.thread_id).catch(() => {});
+          return;
+        }
+        if (msg.thread_id === ACTIVE_THREAD_ID) {
+          loadMessages({ replace: true, keepBottom: true });
+        }
         loadThreads();
       }
     }
@@ -376,6 +419,7 @@
 
     if (msg.type === "active_mode_changed") {
       if (msg.device_id === CURRENT_PSID) loadActiveMode();
+      if (AUTO_SYNC_PSID) syncPsidFromActive(msg.device_id).catch(() => {});
     }
 
     if (msg.type === "device_settings_changed") {
@@ -402,6 +446,7 @@
     await loadConfig();
     fillPsids();
     fillLanguages();
+    $("chatPsidBadge").textContent = `PSID: ${CURRENT_PSID}`;
     await loadLastDevice();
     await loadModes();
     await loadActiveMode();
@@ -427,6 +472,7 @@
     // fallback safety
     CONFIG.psids = CONFIG.psids || ["default","psid_1","psid_2","psid_3","psid_4"];
     CONFIG.languages = CONFIG.languages || ["Indonesia","Arab","Inggris"];
+    MODE_PSID_MAP = CONFIG.mode_psid_map || {};
 
     const saved = localStorage.getItem("scig_psid");
     if (saved && CONFIG.psids.includes(saved)) CURRENT_PSID = saved;
@@ -442,6 +488,18 @@
       sel.appendChild(opt);
     });
     sel.value = CURRENT_PSID;
+  }
+
+  async function syncPsidFromActive(activePsid) {
+    if (!AUTO_SYNC_PSID) return;
+    if (!activePsid) return;
+    if (!CONFIG?.psids || !CONFIG.psids.includes(activePsid)) return;
+    if (activePsid === CURRENT_PSID) return;
+
+    CURRENT_PSID = activePsid;
+    localStorage.setItem("scig_psid", CURRENT_PSID);
+    if ($("psidSelect")) $("psidSelect").value = CURRENT_PSID;
+    await onPsidChanged();
   }
 
   function fillLanguages() {
@@ -463,6 +521,7 @@
     const d = await api("/api/last-device");
     $("lastPhysical").textContent = d.last_physical_device_id || "-";
     $("activePsid").textContent = d.active_psid || "-";
+    await syncPsidFromActive(d.active_psid);
   }
 
   async function loadModes() {
@@ -494,9 +553,13 @@
 
   async function loadActiveMode() {
     ACTIVE_MODE = await api(`/api/mode?device_id=${encodeURIComponent(CURRENT_PSID)}`);
-    $("modeBadge").textContent = `Mode: ${ACTIVE_MODE?.name || "-"}`;
+    $("modeBadge").textContent = `Mode: ${ACTIVE_MODE?.title || ACTIVE_MODE?.name || "-"}`;
 
-    if (ACTIVE_MODE && $("modeSelect")) $("modeSelect").value = String(ACTIVE_MODE.id || "");
+    if (ACTIVE_MODE && $("modeSelect")) {
+      SUPPRESS_MODE_CHANGE = true;
+      $("modeSelect").value = String(ACTIVE_MODE.id || "");
+      SUPPRESS_MODE_CHANGE = false;
+    }
 
     $("langPanel").classList.toggle("hidden", !needsLang(ACTIVE_MODE?.name || ""));
     updateSendState();
@@ -510,10 +573,16 @@
 
   function updateSendState() {
     const isNormal = (ACTIVE_MODE?.name || "") === "normal";
-    $("sendBtn").disabled = !isNormal;
-    $("sendBtn").classList.toggle("opacity-50", !isNormal);
-    $("sendBtn").classList.toggle("cursor-not-allowed", !isNormal);
-    $("sendHint").textContent = isNormal ? "OK, mode NORMAL. Pesan akan diproses LLM provider." : "Send dikunci: hanya boleh saat mode NORMAL.";
+    const btn = $("sendBtn");
+    const hint = $("sendHint");
+    if (btn) {
+      btn.disabled = !isNormal;
+      btn.classList.toggle("opacity-50", !isNormal);
+      btn.classList.toggle("cursor-not-allowed", !isNormal);
+    }
+    if (hint) {
+      hint.textContent = isNormal ? "OK, mode NORMAL. Pesan akan diproses LLM provider." : "Send dikunci: hanya boleh saat mode NORMAL.";
+    }
   }
 
   async function onPsidChanged() {
@@ -521,8 +590,10 @@
     localStorage.setItem("scig_psid", CURRENT_PSID);
 
     ACTIVE_THREAD_ID = null;
-    SMALLEST_MSG_ID = null;
+    ACTIVE_THREAD_MODE = null;
     $("activeThread").textContent = "-";
+    $("threadModeBadge").textContent = "Thread Mode: -";
+    $("chatPsidBadge").textContent = `PSID: ${CURRENT_PSID}`;
     $("messages").innerHTML = "";
 
     await loadActiveMode();
@@ -537,9 +608,10 @@
       const res = await api("/api/mode", {method:"POST", body: JSON.stringify({device_id: CURRENT_PSID, mode_id: modeId})});
       await loadActiveMode();
       await previewPrompt();
-      toast(`✅ Mode updated: <b>${escapeHtml(res.title || res.name || "OK")}</b>`, true);
+      await loadLastDevice();
+      toast(`OK Mode updated: <b>${escapeHtml(res.title || res.name || "OK")}</b>`, true);
     } catch(e) {
-      toast(`❌ ${escapeHtml(e.message)}`, false);
+      toast(`ERR ${escapeHtml(e.message)}`, false);
     }
   }
 
@@ -549,9 +621,9 @@
       const target = $("tgtLang").value;
       await api("/api/device/settings", {method:"POST", body: JSON.stringify({device_id: CURRENT_PSID, source, target})});
       await previewPrompt();
-      toast("✅ Language saved", true);
+      toast("OK Language saved", true);
     } catch(e) {
-      toast(`❌ ${escapeHtml(e.message)}`, false);
+      toast(`ERR ${escapeHtml(e.message)}`, false);
     }
   }
 
@@ -581,14 +653,11 @@
       return;
     }
 
-    list.forEach((c, idx) => {
+    list.forEach((c) => {
       const ok = !!c.is_connected;
-      const token = (c.token || "").trim();
-      const masked = maskToken(token);
       const box = document.createElement("div");
       box.className = "p-3 rounded-xl border border-white/10 bg-black/20";
 
-      const tokenId = `tok_${idx}_${String(c.code || "")}`;
       box.innerHTML = `
         <div class="flex items-center justify-between gap-2">
           <div class="font-mono text-sm">${escapeHtml(c.code)}</div>
@@ -597,56 +666,8 @@
           </div>
         </div>
 
-        <div class="mt-2 flex items-start justify-between gap-2">
-          <div class="text-xs text-slate-300 font-mono break-all">
-            <span class="tokenMasked">${escapeHtml(masked)}</span>
-            <span class="tokenFull hidden">${escapeHtml(token || "(empty)")}</span>
-          </div>
-
-          <div class="flex gap-2 shrink-0">
-            <button class="btn bg-slate-800 hover:bg-slate-700 text-white text-xs px-3 py-2 toggleToken" type="button">
-              Show
-            </button>
-            <button class="btn bg-slate-800 hover:bg-slate-700 text-white text-xs px-3 py-2 copyToken" type="button">
-              Copy
-            </button>
-          </div>
-        </div>
-
         ${c.last_error ? `<div class="mt-2 text-[11px] text-red-300 truncate" title="${escapeHtml(c.last_error)}">${escapeHtml(c.last_error)}</div>` : ``}
       `;
-
-      const btnToggle = box.querySelector(".toggleToken");
-      const btnCopy = box.querySelector(".copyToken");
-      const maskedEl = box.querySelector(".tokenMasked");
-      const fullEl = box.querySelector(".tokenFull");
-
-      btnToggle?.addEventListener("click", () => {
-        const isHidden = fullEl.classList.contains("hidden");
-        if (isHidden) {
-          fullEl.classList.remove("hidden");
-          maskedEl.classList.add("hidden");
-          btnToggle.textContent = "Hide";
-        } else {
-          fullEl.classList.add("hidden");
-          maskedEl.classList.remove("hidden");
-          btnToggle.textContent = "Show";
-        }
-      });
-
-      btnCopy?.addEventListener("click", async () => {
-        const tokenText = (token || "").trim();
-        if (!tokenText) return toast("Token kosong.", false);
-
-        try {
-          await navigator.clipboard.writeText(tokenText);
-          btnCopy.textContent = "Copied!";
-          setTimeout(() => btnCopy.textContent = "Copy", 900);
-        } catch (e) {
-          btnCopy.textContent = "Fail";
-          setTimeout(() => btnCopy.textContent = "Copy", 900);
-        }
-      });
 
       wrap.appendChild(box);
     });
@@ -668,7 +689,7 @@
 
   function newModeDraft() {
     $("modeEditName").value = "custom_mode";
-    $("modeEditTitle").value = "✨ Custom Mode";
+    $("modeEditTitle").value = "Custom Mode";
     $("modeEditIntro").value = "PERAN: ...\nGAYA: ...\nATURAN:\n- ...";
     $("modeEditStatus").innerHTML = `<span class="text-xs muted">Draft mode baru siap. Tinggal Save.</span>`;
   }
@@ -679,20 +700,20 @@
     const introduction = ($("modeEditIntro").value || "").trim();
 
     if (!name || !title || !introduction) {
-      $("modeEditStatus").innerHTML = `<span class="text-red-200 text-sm">❌ name/title/introduction wajib diisi</span>`;
+      $("modeEditStatus").innerHTML = `<span class="text-red-200 text-sm">ERR name/title/introduction wajib diisi</span>`;
       return;
     }
 
     try {
       await api("/api/modes", {method:"POST", body: JSON.stringify({name, title, introduction})});
-      $("modeEditStatus").innerHTML = `<span class="text-emerald-200 text-sm">✅ Saved</span>`;
-      toast("✅ Mode tersimpan", true);
+      $("modeEditStatus").innerHTML = `<span class="text-emerald-200 text-sm">OK Saved</span>`;
+      toast("OK Mode tersimpan", true);
       await loadModes();
       await loadActiveMode();
       await previewPrompt();
     } catch(e) {
-      $("modeEditStatus").innerHTML = `<span class="text-red-200 text-sm">❌ ${escapeHtml(e.message)}</span>`;
-      toast("❌ " + escapeHtml(e.message), false);
+      $("modeEditStatus").innerHTML = `<span class="text-red-200 text-sm">ERR ${escapeHtml(e.message)}</span>`;
+      toast("ERR " + escapeHtml(e.message), false);
     }
   }
 
@@ -717,15 +738,25 @@
         "w-full text-left p-3 rounded-xl border border-white/10 " +
         (active ? "bg-blue-500/15" : "bg-black/15 hover:bg-black/25");
       btn.onclick = () => selectThread(t.id);
+      const modeLabel = (t.mode_title || t.mode_name || "-");
       btn.innerHTML = `
         <div class="text-sm font-semibold truncate">${escapeHtml(t.title || "New Chat")}</div>
-        <div class="text-xs muted mt-1">#${escapeHtml(String(t.id))} • updated ${escapeHtml(String(t.updated_at || ""))}</div>
+        <div class="text-xs muted mt-1">#${escapeHtml(String(t.id))} - updated ${escapeHtml(String(t.updated_at || ""))}</div>
+        <div class="text-[11px] muted mt-1">mode: ${escapeHtml(String(modeLabel))}</div>
       `;
       wrap.appendChild(btn);
     });
 
     if (!ACTIVE_THREAD_ID && THREADS.length > 0) {
       await selectThread(THREADS[0].id);
+    }
+
+    if (ACTIVE_THREAD_ID) {
+      const t = THREADS.find(x => x.id === ACTIVE_THREAD_ID);
+      if (t) {
+        ACTIVE_THREAD_MODE = t.mode_title || t.mode_name || null;
+        $("threadModeBadge").textContent = `Thread Mode: ${ACTIVE_THREAD_MODE || "-"}`;
+      }
     }
   }
 
@@ -734,16 +765,21 @@
       const r = await api("/api/chats/new", {method:"POST", body: JSON.stringify({device_id: CURRENT_PSID})});
       await loadThreads();
       await selectThread(r.id);
-      toast(`✅ New thread #${r.id}`, true);
+      toast(`OK New thread #${r.id}`, true);
     } catch(e) {
-      toast(`❌ ${escapeHtml(e.message)}`, false);
+      toast(`ERR ${escapeHtml(e.message)}`, false);
     }
   }
 
   async function selectThread(id) {
     ACTIVE_THREAD_ID = id;
-    SMALLEST_MSG_ID = null;
     $("activeThread").textContent = String(id);
+    ACTIVE_THREAD_MODE = null;
+    const t = THREADS.find(x => x.id === id);
+    if (t) {
+      ACTIVE_THREAD_MODE = t.mode_title || t.mode_name || null;
+    }
+    $("threadModeBadge").textContent = `Thread Mode: ${ACTIVE_THREAD_MODE || "-"}`;
 
     await loadThreads();
     await loadMessages({ replace: true, keepBottom: true });
@@ -755,144 +791,76 @@
     const ts = m.created_at ? String(m.created_at) : "";
 
     const row = document.createElement("div");
-    row.className = "flex " + (role === "user" ? "justify-end" : "justify-start");
+    row.className = "msg-row " + (role === "user" ? "user" : "assistant");
 
     const bubble = document.createElement("div");
+    bubble.className = "msg-bubble";
 
-    if (role === "user") {
-      bubble.className = "bubble bg-blue-500/10 border-blue-400/20 max-w-[92%]";
-    } else if (role === "assistant") {
-      bubble.className = "bubble bg-slate-900/40 border-white/10 max-w-[92%]";
-    } else {
-      bubble.className = "bubble bg-amber-500/10 border-amber-400/20 max-w-[92%] text-xs font-mono";
-    }
+    const label = (role === "assistant") ? "Xiaozhi" : "User";
 
     bubble.innerHTML = `
-      <div class="flex items-center justify-between gap-3 mb-1">
-        <div class="text-[11px] ${role === "user" ? "text-blue-200" : role === "assistant" ? "text-slate-200" : "text-amber-200"}">
-          ${escapeHtml(role.toUpperCase())}
-        </div>
-        <div class="text-[10px] muted">${escapeHtml(ts)}</div>
-      </div>
-      <div class="text-sm">${escapeHtml(content)}</div>
+      <div class="msg-name">${escapeHtml(label)}</div>
+      <div class="text-sm text-slate-800">${escapeHtml(content)}</div>
+      <div class="msg-meta">${escapeHtml(ts)}</div>
     `;
+
+    if (role === "assistant") {
+      const avatar = document.createElement("div");
+      avatar.className = "msg-avatar";
+      avatar.textContent = "X";
+      row.appendChild(avatar);
+    }
 
     row.appendChild(bubble);
     return row;
   }
 
-  async function loadMessages({ replace=false, keepBottom=false, prepend=false } = {}) {
+  async function loadMessages({ replace=false, keepBottom=false } = {}) {
     if (!ACTIVE_THREAD_ID) return;
 
     const wrap = $("messages");
-    const before = prepend && SMALLEST_MSG_ID ? `&before_id=${encodeURIComponent(SMALLEST_MSG_ID)}` : "";
-    const msgs = await api(`/api/chats/${ACTIVE_THREAD_ID}/messages?device_id=${encodeURIComponent(CURRENT_PSID)}&limit=200${before}`);
-
-    const prevScrollHeight = wrap.scrollHeight;
-    const prevScrollTop = wrap.scrollTop;
+    const msgs = await api(`/api/chats/${ACTIVE_THREAD_ID}/messages?device_id=${encodeURIComponent(CURRENT_PSID)}&limit=10000`);
+    const filtered = (msgs || []).filter(m => m.role === "user" || m.role === "assistant");
 
     if (replace) wrap.innerHTML = "";
 
     if (!msgs || msgs.length === 0) {
       if (replace) wrap.innerHTML = `<div class="text-xs muted">Belum ada pesan.</div>`;
-      else toast("Tidak ada pesan lebih lama.", true);
       return;
     }
+    const frag = document.createDocumentFragment();
+    filtered.forEach(m => frag.appendChild(renderOneMessage(m)));
+    wrap.appendChild(frag);
+    if (keepBottom) wrap.scrollTop = wrap.scrollHeight;
 
-    const newSmallest = msgs[0]?.id ?? null;
-    if (SMALLEST_MSG_ID == null) SMALLEST_MSG_ID = newSmallest;
-    else SMALLEST_MSG_ID = Math.min(SMALLEST_MSG_ID, newSmallest);
-
-    if (prepend) {
-      const frag = document.createDocumentFragment();
-      msgs.forEach(m => frag.appendChild(renderOneMessage(m)));
-
-      if (wrap.firstChild) wrap.insertBefore(frag, wrap.firstChild);
-      else wrap.appendChild(frag);
-
-      const newScrollHeight = wrap.scrollHeight;
-      wrap.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
-    } else {
-      const frag = document.createDocumentFragment();
-      msgs.forEach(m => frag.appendChild(renderOneMessage(m)));
-      wrap.appendChild(frag);
-
-      if (keepBottom) wrap.scrollTop = wrap.scrollHeight;
+    if (filtered.length === 0 && replace) {
+      wrap.innerHTML = `<div class="text-xs muted">Belum ada pesan user/assistant.</div>`;
     }
   }
-
-  async function loadOlder() {
-    if (!ACTIVE_THREAD_ID) return;
-    if (!SMALLEST_MSG_ID) return toast("Belum ada pesan untuk dipaginasi.", true);
-    try {
-      await loadMessages({ prepend: true });
-    } catch(e) {
-      toast(`❌ ${escapeHtml(e.message)}`, false);
-    }
-  }
-
-  async function deleteThread() {
-    if (!ACTIVE_THREAD_ID) return;
-    const ok = confirm(`Hapus thread #${ACTIVE_THREAD_ID}?`);
-    if (!ok) return;
-
-    try {
-      await api(`/api/chats/${ACTIVE_THREAD_ID}?device_id=${encodeURIComponent(CURRENT_PSID)}`, { method: "DELETE" });
-      toast(`✅ Thread #${ACTIVE_THREAD_ID} deleted`, true);
-      ACTIVE_THREAD_ID = null;
-      SMALLEST_MSG_ID = null;
-      $("activeThread").textContent = "-";
-      $("messages").innerHTML = "";
-      await loadThreads();
-    } catch(e) {
-      toast(`❌ ${escapeHtml(e.message)}`, false);
-    }
-  }
-
-  async function sendMsg() {
-    const txt = ($("msgInput").value || "").trim();
-    if (!txt) return;
-
-    if (!ACTIVE_THREAD_ID) return toast("Pilih thread dulu.", false);
-
-    const isNormal = (ACTIVE_MODE?.name || "") === "normal";
-    if (!isNormal) return toast("Send hanya boleh saat mode NORMAL.", false);
-
-    $("sendBtn").disabled = true;
-    try {
-      await api("/api/chats/send", {
-        method: "POST",
-        body: JSON.stringify({
-          device_id: CURRENT_PSID,
-          thread_id: ACTIVE_THREAD_ID,
-          message: txt,
-          vars: {}
-        })
-      });
-
-      $("msgInput").value = "";
-      await loadMessages({ replace: true, keepBottom: true });
-      await loadThreads();
-      toast("✅ Sent", true);
-    } catch(e) {
-      toast(`❌ ${escapeHtml(e.message)}`, false);
-    } finally {
-      $("sendBtn").disabled = false;
-      updateSendState();
-    }
-  }
-
-  document.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.key === "Enter") {
-      const a = document.activeElement;
-      if (a && a.id === "msgInput") sendMsg();
-    }
-  });
 
   window.addEventListener("load", () => {
+    const modeSel = $("modeSelect");
+    if (modeSel) {
+      modeSel.addEventListener("change", async () => {
+        if (SUPPRESS_MODE_CHANGE) return;
+        const selectedModeId = parseInt(modeSel.value, 10);
+        const mode = MODES.find(m => m.id === selectedModeId);
+        const mappedPsid = mode && MODE_PSID_MAP[mode.name] ? MODE_PSID_MAP[mode.name] : "default";
+        if (mappedPsid !== CURRENT_PSID) {
+          CURRENT_PSID = mappedPsid;
+          $("psidSelect").value = CURRENT_PSID;
+          await onPsidChanged();
+          SUPPRESS_MODE_CHANGE = true;
+          $("modeSelect").value = String(selectedModeId);
+          SUPPRESS_MODE_CHANGE = false;
+        }
+        await applyMode();
+      });
+    }
+
     boot().catch(err => {
       console.error(err);
-      toast("❌ Gagal boot dashboard: " + escapeHtml(err.message), false);
+      toast("ERR Gagal boot dashboard: " + escapeHtml(err.message), false);
     });
   });
 </script>

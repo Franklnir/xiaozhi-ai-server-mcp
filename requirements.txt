@@ -9,3 +9,5 @@ python-multipart
 python-jose
 jinja2
 requests
+cryptography
+alembic

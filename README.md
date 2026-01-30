@@ -1,6 +1,6 @@
 # SciG Mode MCP (FastAPI + MySQL + Xiaozhi MCP)
 
-Tujuan: **Ubah mode & introduction di dashboard → Xiaozhi auto-sync via MCP dan pakai prompt terbaru.**
+Tujuan: **Ubah mode & introduction di dashboard -> Xiaozhi auto-sync via MCP dan pakai prompt terbaru.**
 
 ## 1) Setup MySQL
 Buat DB `scig_chat` (atau sesuaikan), lalu update `DATABASE_URL` di `.env`.

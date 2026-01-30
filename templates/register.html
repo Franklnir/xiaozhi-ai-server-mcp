@@ -29,9 +29,7 @@
   <div class="w-full max-w-md bg-white/10 backdrop-blur border border-white/15 rounded-2xl shadow-2xl p-8">
     <div class="mb-6">
       <h1 class="text-2xl font-bold">Register Akun</h1>
-      <p class="text-sm text-white/70">
-        Admin atau User (claim token MCP via kode 8 digit, dilakukan saat register).
-      </p>
+      <p class="text-sm text-white/70"></p>
     </div>
 
     <form method="POST" action="/register" class="space-y-4" id="regForm">
@@ -58,9 +56,9 @@
         <label class="block text-sm text-white/80 mb-1">Kode</label>
 
         <div class="relative">
-          <input type="text" name="code" required maxlength="32" id="code"
+          <input type="text" name="code" required maxlength="10" id="code"
             class="w-full bg-black/30 border border-white/15 rounded-xl px-3 py-2 pr-28 outline-none focus:ring-2 focus:ring-emerald-400"
-            placeholder="8 digit (user) atau admin master code">
+            placeholder="10 karakter (user) atau admin master code">
 
           <!-- status capsule -->
           <div class="absolute top-1/2 -translate-y-1/2 right-2 flex items-center gap-2">
@@ -78,11 +76,6 @@
             </span>
           </div>
         </div>
-
-        <p class="text-xs text-white/60 mt-1 leading-relaxed">
-          • Admin master code: <span class="font-mono font-semibold">{{ admin_code }}</span><br/>
-          • User code: minta ke admin (kode 8 digit pemilik token MCP, berlaku selamanya)
-        </p>
 
         <p class="text-xs mt-2 text-white/70" id="codeHint"></p>
       </div>

@@ -4,14 +4,53 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin - SciG Mode MCP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
+      font-family:"Space Grotesk",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
       background:
         radial-gradient(1100px 550px at 15% 10%, #7c3aed 0%, transparent 55%),
         radial-gradient(900px 500px at 85% 20%, #06b6d4 0%, transparent 55%),
         #0b1220;
     }
+
+    /* Telegram-like chat viewer */
+    .tg-shell{
+      background:
+        radial-gradient(circle at 12px 12px, rgba(148,163,184,.14) 1px, transparent 1px),
+        radial-gradient(circle at 4px 4px, rgba(148,163,184,.10) 1px, transparent 1px),
+        #eef2f7;
+      background-size: 24px 24px, 12px 12px;
+      border:1px solid #dbe3ee;
+      border-radius:18px;
+    }
+    .tg-row{display:flex;gap:10px;margin:12px 0;align-items:flex-end}
+    .tg-row.user{justify-content:flex-end}
+    .tg-row.assistant{justify-content:flex-start}
+    .tg-avatar{
+      width:28px;height:28px;border-radius:999px;
+      display:flex;align-items:center;justify-content:center;
+      background:#c7d2fe;color:#1e1b4b;font-weight:700;font-size:12px;
+      box-shadow:0 2px 6px rgba(15,23,42,.12);
+    }
+    .tg-bubble{
+      max-width:74%;
+      padding:10px 12px;
+      white-space:pre-wrap;word-break:break-word;
+      box-shadow:0 6px 16px rgba(15,23,42,.08);
+      border:1px solid transparent;
+    }
+    .tg-row.user .tg-bubble{
+      background:#d7f0ff;border-color:#b6ddff;border-radius:16px 16px 6px 16px;
+    }
+    .tg-row.assistant .tg-bubble{
+      background:#ffffff;border-color:#e2e8f0;border-radius:16px 16px 16px 6px;
+    }
+    .tg-name{font-weight:600;font-size:11px;color:#334155;margin-bottom:4px}
+    .tg-meta{margin-top:6px;font-size:10px;color:#64748b;text-align:right}
   </style>
 </head>
 
@@ -21,7 +60,7 @@
     <div class="flex items-center justify-between gap-3">
       <div>
         <h1 class="text-2xl font-bold">Admin Panel</h1>
-        <p class="text-sm text-white/70">Kelola code & token MCP, termasuk unclaim agar bisa dipakai user baru.</p>
+        <p class="text-sm text-white/70">Kelola code MCP. Token disembunyikan demi keamanan.</p>
       </div>
 
       <div class="flex items-center gap-2">
@@ -63,7 +102,7 @@
           <div class="w-full max-w-xs">
             <input id="search" type="text"
               class="w-full bg-black/25 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
-              placeholder="Cari: code / username / token…">
+              placeholder="Cari: code / username / status...">
           </div>
         </div>
 
@@ -73,7 +112,6 @@
               <tr>
                 <th class="text-left px-3 py-2">Code</th>
                 <th class="text-left px-3 py-2">Owner</th>
-                <th class="text-left px-3 py-2">Token</th>
                 <th class="text-left px-3 py-2">Status</th>
                 <th class="text-left px-3 py-2">Aksi</th>
               </tr>
@@ -84,7 +122,7 @@
               <tr class="codeRow">
                 <td class="px-3 py-2 align-top">
                   <div class="font-mono font-semibold">{{ c.code }}</div>
-                  <div class="text-xs text-white/60">id={{ c.id }} • {{ c.created_at }}</div>
+                  <div class="text-xs text-white/60">id={{ c.id }} - {{ c.created_at }}</div>
                 </td>
 
                 <td class="px-3 py-2 align-top">
@@ -97,32 +135,21 @@
                 </td>
 
                 <td class="px-3 py-2 align-top">
-                  <div class="flex items-start gap-2">
-                    <div class="font-mono text-xs break-all max-w-md">
-                      <span class="tokenMasked">
-                        {% if c.token %}
-                          {{ c.token[:24] }}…{{ c.token[-10:] }}
-                        {% else %}
-                          (empty)
-                        {% endif %}
-                      </span>
-                      <span class="tokenFull hidden">{{ c.token or "" }}</span>
+                  {% if c.used_by %}
+                    <div class="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-200 text-xs mb-2">
+                      <span class="w-2 h-2 rounded-full bg-blue-400"></span> Claimed
                     </div>
-
-                    <div class="flex flex-col gap-2">
-                      <button type="button"
-                        class="toggleToken px-2 py-1 rounded-lg bg-white/10 border border-white/15 hover:bg-white/15 transition text-xs">
-                        Show
-                      </button>
-                      <button type="button"
-                        class="copyToken px-2 py-1 rounded-lg bg-white/10 border border-white/15 hover:bg-white/15 transition text-xs">
-                        Copy
-                      </button>
+                  {% else %}
+                    <div class="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-slate-500/15 border border-slate-400/30 text-slate-200 text-xs mb-2">
+                      <span class="w-2 h-2 rounded-full bg-slate-400"></span> Unclaimed
                     </div>
-                  </div>
-                </td>
+                  {% endif %}
+                  {% if not c.has_token %}
+                    <div class="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-red-500/15 border border-red-400/30 text-red-200 text-xs mb-2">
+                      <span class="w-2 h-2 rounded-full bg-red-400"></span> Token kosong
+                    </div>
+                  {% endif %}
 
-                <td class="px-3 py-2 align-top">
                   {% set connected = (c.is_connected or 0) %}
                   {% if connected %}
                     <div class="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-200 text-xs">
@@ -148,7 +175,40 @@
                       <input type="hidden" name="code_id" value="{{ c.id }}">
                       <button type="submit"
                         class="w-full px-3 py-2 rounded-xl bg-amber-600/80 hover:bg-amber-500 transition text-xs font-semibold">
-                        Unclaim
+                        Unclaim + Delete User
+                      </button>
+                    </form>
+                    <details class="rounded-lg border border-white/10 p-2 bg-white/5">
+                      <summary class="cursor-pointer text-xs text-cyan-200">Edit token</summary>
+                      <form method="POST" action="/admin/codes/update" class="mt-2 space-y-2">
+                        <input type="hidden" name="code_id" value="{{ c.id }}">
+                        <textarea name="token" rows="3" required
+                          class="w-full bg-black/25 border border-white/15 rounded-lg px-2 py-1 text-xs"
+                          placeholder="Paste token baru (token lama tidak ditampilkan)"></textarea>
+                        <button type="submit"
+                          class="w-full px-3 py-2 rounded-xl bg-cyan-600/80 hover:bg-cyan-500 transition text-xs font-semibold">
+                          Update Token
+                        </button>
+                      </form>
+                    </details>
+                    <details class="rounded-lg border border-white/10 p-2 bg-white/5">
+                      <summary class="cursor-pointer text-xs text-cyan-200">Edit code (10 karakter)</summary>
+                      <form method="POST" action="/admin/codes/update-code" class="mt-2 space-y-2">
+                        <input type="hidden" name="code_id" value="{{ c.id }}">
+                        <input name="code" maxlength="10" required
+                          class="w-full bg-black/25 border border-white/15 rounded-lg px-2 py-1 text-xs font-mono"
+                          value="{{ c.code }}" placeholder="contoh: Ab12Cd34Ef">
+                        <button type="submit"
+                          class="w-full px-3 py-2 rounded-xl bg-cyan-600/80 hover:bg-cyan-500 transition text-xs font-semibold">
+                          Update Code
+                        </button>
+                      </form>
+                    </details>
+                    <form method="POST" action="/admin/codes/delete" class="deleteCodeForm">
+                      <input type="hidden" name="code_id" value="{{ c.id }}">
+                      <button type="submit"
+                        class="w-full px-3 py-2 rounded-xl bg-red-600/80 hover:bg-red-500 transition text-xs font-semibold">
+                        Delete Code
                       </button>
                     </form>
                   </div>
@@ -160,14 +220,297 @@
         </div>
 
         <p class="text-xs text-white/60 mt-3">
-          Unclaim akan melepas <span class="font-mono">used_by</span> dan reset status koneksi, sehingga code bisa dipakai user baru.
+          Unclaim akan melepas <span class="font-mono">used_by</span>, reset status koneksi, dan menghapus user pemilik code.
         </p>
+      </div>
+    </div>
+
+    {% if err %}
+      <div class="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-100 text-sm">
+        Error: {{ err }}
+      </div>
+    {% endif %}
+    {% if ok %}
+      <div class="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-100 text-sm">
+        OK: {{ ok }}
+      </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+      <!-- Create user -->
+      <div class="lg:col-span-1 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur">
+        <h2 class="font-semibold mb-2">Tambah User</h2>
+        <p class="text-xs text-white/70 mb-3">Buat akun user/admin secara manual.</p>
+
+        <form method="POST" action="/admin/users" class="space-y-3">
+          <div>
+            <label class="block text-xs text-white/70 mb-1">Username</label>
+            <input name="username" required
+              class="w-full bg-black/25 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-400 text-sm"
+              placeholder="username">
+          </div>
+          <div>
+            <label class="block text-xs text-white/70 mb-1">Password</label>
+            <input type="password" name="password" required
+              class="w-full bg-black/25 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-400 text-sm"
+              placeholder="min 6 karakter">
+          </div>
+          <div>
+            <label class="block text-xs text-white/70 mb-1">Role</label>
+            <select name="role"
+              class="w-full bg-black/25 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-400 text-sm">
+              <option value="user">user</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+          <button class="w-full py-2.5 rounded-xl font-semibold bg-cyan-600 hover:bg-cyan-500 transition">
+            Create User
+          </button>
+        </form>
+      </div>
+
+      <!-- List users -->
+      <div class="lg:col-span-2 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="font-semibold">Users</h2>
+          <div class="w-full max-w-xs">
+            <input id="userSearch" type="text"
+              class="w-full bg-black/25 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
+              placeholder="Cari: username / role / status...">
+          </div>
+        </div>
+
+        <div class="mt-4 overflow-x-auto rounded-xl border border-white/10">
+          <table class="min-w-full text-sm" id="usersTable">
+            <thead class="bg-black/25 text-white/80">
+              <tr>
+                <th class="text-left px-3 py-2">ID</th>
+                <th class="text-left px-3 py-2">Username</th>
+                <th class="text-left px-3 py-2">Role</th>
+                <th class="text-left px-3 py-2">Codes</th>
+                <th class="text-left px-3 py-2">Status</th>
+                <th class="text-left px-3 py-2">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/10">
+              {% if users %}
+                {% for u in users %}
+                <tr class="userRow">
+                  <td class="px-3 py-2 align-top">
+                    <div class="font-mono text-xs">{{ u.id }}</div>
+                  </td>
+                  <td class="px-3 py-2 align-top">
+                    <div class="font-semibold">{{ u.username }}</div>
+                    <div class="text-xs text-white/60">created: {{ u.created_at }}</div>
+                  </td>
+                  <td class="px-3 py-2 align-top">
+                    <div class="text-xs">{{ u.role }}</div>
+                  </td>
+                  <td class="px-3 py-2 align-top">
+                    <div class="text-xs">total: {{ u.code_count or 0 }}</div>
+                    <div class="text-xs text-white/60">connected: {{ u.connected_codes or 0 }}</div>
+                  </td>
+                  <td class="px-3 py-2 align-top">
+                    {% set online = (u.connected_codes or 0) > 0 %}
+                    {% if online %}
+                      <div class="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-200 text-xs">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Online
+                      </div>
+                      <div class="text-xs text-white/60 mt-1">last_ok: {{ u.last_ok_at or "-" }}</div>
+                    {% else %}
+                      <div class="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-slate-500/15 border border-slate-400/30 text-slate-200 text-xs">
+                        <span class="w-2 h-2 rounded-full bg-slate-400"></span> Offline
+                      </div>
+                      <div class="text-xs text-white/60 mt-1">last_err: {{ u.last_err_at or "-" }}</div>
+                    {% endif %}
+                  </td>
+                  <td class="px-3 py-2 align-top">
+                    <div class="flex flex-col gap-2">
+                      <details class="rounded-lg border border-white/10 p-2 bg-white/5">
+                        <summary class="cursor-pointer text-xs text-cyan-200">Edit user</summary>
+                        <form method="POST" action="/admin/users/update" class="mt-2 space-y-2">
+                          <input type="hidden" name="user_id" value="{{ u.id }}">
+                          <select name="role"
+                            class="w-full bg-black/25 border border-white/15 rounded-lg px-2 py-1 text-xs">
+                            <option value="user" {% if u.role == "user" %}selected{% endif %}>user</option>
+                            <option value="admin" {% if u.role == "admin" %}selected{% endif %}>admin</option>
+                          </select>
+                          <input type="password" name="password"
+                            class="w-full bg-black/25 border border-white/15 rounded-lg px-2 py-1 text-xs"
+                            placeholder="Password baru (opsional)">
+                          <button type="submit"
+                            class="w-full px-3 py-2 rounded-xl bg-cyan-600/80 hover:bg-cyan-500 transition text-xs font-semibold">
+                            Update User
+                          </button>
+                        </form>
+                      </details>
+                      <form method="POST" action="/admin/users/delete" class="deleteUserForm">
+                        <input type="hidden" name="user_id" value="{{ u.id }}">
+                        <button type="submit"
+                          class="w-full px-3 py-2 rounded-xl bg-red-600/80 hover:bg-red-500 transition text-xs font-semibold">
+                          Delete User
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="6" class="px-3 py-3 text-xs text-white/60">Belum ada user.</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+
+        <p class="text-xs text-white/60 mt-3">
+          Status Online berdasarkan koneksi MCP aktif pada salah satu code milik user.
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-4 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="font-semibold">Audit Logs (Admin)</h2>
+        <div class="text-xs text-white/60">Menampilkan 200 log terbaru.</div>
+      </div>
+
+      <div class="mt-4 overflow-x-auto rounded-xl border border-white/10">
+        <table class="min-w-full text-sm" id="auditTable">
+          <thead class="bg-black/25 text-white/80">
+            <tr>
+              <th class="text-left px-3 py-2">Waktu</th>
+              <th class="text-left px-3 py-2">Admin</th>
+              <th class="text-left px-3 py-2">Action</th>
+              <th class="text-left px-3 py-2">Target</th>
+              <th class="text-left px-3 py-2">IP</th>
+              <th class="text-left px-3 py-2">Details</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/10">
+            {% if logs %}
+              {% for l in logs %}
+              <tr>
+                <td class="px-3 py-2 align-top text-xs">{{ l.created_at }}</td>
+                <td class="px-3 py-2 align-top text-xs">
+                  <div class="font-semibold">{{ l.admin_username or "-" }}</div>
+                  <div class="text-white/60">id={{ l.admin_user_id or "-" }}</div>
+                </td>
+                <td class="px-3 py-2 align-top text-xs font-mono">{{ l.action }}</td>
+                <td class="px-3 py-2 align-top text-xs">
+                  <div>{{ l.target_type or "-" }}</div>
+                  <div class="text-white/60">{{ l.target_id or "-" }}</div>
+                </td>
+                <td class="px-3 py-2 align-top text-xs">
+                  <div>{{ l.ip or "-" }}</div>
+                </td>
+                <td class="px-3 py-2 align-top text-xs">
+                  <div class="max-w-xl break-all text-white/70">{{ l.details or "-" }}</div>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" class="px-3 py-3 text-xs text-white/60">Belum ada audit log.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="mt-4 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="font-semibold">Monitoring</h2>
+        <div class="text-xs text-white/60">Refresh otomatis tiap 5 detik.</div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="text-xs text-white/60">Uptime</div>
+          <div class="text-lg font-semibold" id="mUptime">-</div>
+        </div>
+        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="text-xs text-white/60">HTTP (1m / 5m)</div>
+          <div class="text-lg font-semibold" id="mHttpRate">-</div>
+          <div class="text-xs text-white/60 mt-1">Total: <span id="mHttpTotal">-</span> | Errors: <span id="mHttpErr">-</span></div>
+        </div>
+        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="text-xs text-white/60">Messages (1m / 5m)</div>
+          <div class="text-lg font-semibold" id="mMsgRate">-</div>
+          <div class="text-xs text-white/60 mt-1">Total: <span id="mMsgTotal">-</span></div>
+        </div>
+        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="text-xs text-white/60">WS Clients</div>
+          <div class="text-lg font-semibold" id="mWsClients">-</div>
+        </div>
+        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="text-xs text-white/60">MCP Workers</div>
+          <div class="text-lg font-semibold" id="mMcpWorkers">-</div>
+          <div class="text-xs text-white/60 mt-1">Enabled: <span id="mMcpEnabled">-</span></div>
+        </div>
+        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="text-xs text-white/60">Process Memory</div>
+          <div class="text-lg font-semibold" id="mMem">-</div>
+          <div class="text-xs text-white/60 mt-1">Threads: <span id="mThreads">-</span></div>
+        </div>
+        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="text-xs text-white/60">Codes Connected / Total</div>
+          <div class="text-lg font-semibold" id="mCodes">-</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="font-semibold">Chat Viewer (Admin)</h2>
+        <div class="text-xs text-white/60">Baca chat Xiaozhi per user.</div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label class="text-xs text-white/70">Pilih User</label>
+          <select id="chatUserSelect"
+            class="w-full bg-black/25 border border-white/15 rounded-xl px-3 py-2 text-sm">
+            <option value="">-- pilih --</option>
+            {% for u in users %}
+              <option value="{{ u.id }}">{{ u.username }} (id={{ u.id }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-white/70">Device ID</label>
+          <select id="chatDeviceSelect"
+            class="w-full bg-black/25 border border-white/15 rounded-xl px-3 py-2 text-sm">
+            <option value="">-- pilih user dulu --</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button id="chatReloadBtn"
+            class="w-full px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm">
+            Reload Threads
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-1">
+          <div class="text-xs text-white/60 mb-2">Threads</div>
+          <div id="chatThreads" class="space-y-2 max-h-[420px] overflow-auto pr-1"></div>
+        </div>
+        <div class="md:col-span-2">
+          <div class="text-xs text-white/60 mb-2">
+            Thread: <span id="chatActiveThread" class="font-mono text-xs">-</span>
+          </div>
+          <div id="chatMessages" class="max-h-[420px] overflow-auto tg-shell p-3 text-slate-800"></div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Search filter (by code / username / token / status)
+    // Search filter (by code / username / status)
     const search = document.getElementById("search");
     const rows = Array.from(document.querySelectorAll(".codeRow"));
 
@@ -179,48 +522,201 @@
       });
     });
 
-    // Toggle token + copy
+    // Search filter (users)
+    const userSearch = document.getElementById("userSearch");
+    const userRows = Array.from(document.querySelectorAll(".userRow"));
+    userSearch?.addEventListener("input", () => {
+      const q = (userSearch.value || "").toLowerCase().trim();
+      userRows.forEach(r => {
+        const text = r.innerText.toLowerCase();
+        r.style.display = text.includes(q) ? "" : "none";
+      });
+    });
+
+    // confirm actions
     document.querySelectorAll(".codeRow").forEach(row => {
-      const btnToggle = row.querySelector(".toggleToken");
-      const btnCopy = row.querySelector(".copyToken");
-      const masked = row.querySelector(".tokenMasked");
-      const full = row.querySelector(".tokenFull");
-
-      btnToggle?.addEventListener("click", () => {
-        const isHidden = full.classList.contains("hidden");
-        if (isHidden) {
-          full.classList.remove("hidden");
-          masked.classList.add("hidden");
-          btnToggle.textContent = "Hide";
-        } else {
-          full.classList.add("hidden");
-          masked.classList.remove("hidden");
-          btnToggle.textContent = "Show";
-        }
-      });
-
-      btnCopy?.addEventListener("click", async () => {
-        const tokenText = (full?.textContent || "").trim();
-        if (!tokenText) return;
-
-        try {
-          await navigator.clipboard.writeText(tokenText);
-          btnCopy.textContent = "Copied!";
-          setTimeout(() => btnCopy.textContent = "Copy", 900);
-        } catch (e) {
-          btnCopy.textContent = "Fail";
-          setTimeout(() => btnCopy.textContent = "Copy", 900);
-        }
-      });
-
-      // confirm unclaim
       const unclaimForm = row.querySelector(".unclaimForm");
       unclaimForm?.addEventListener("submit", (e) => {
-        if (!confirm("Unclaim code ini? Code akan bisa dipakai user baru.")) {
+        if (!confirm("Unclaim code ini? User pemilik code juga akan dihapus.")) {
+          e.preventDefault();
+        }
+      });
+
+      // confirm delete code
+      const deleteCodeForm = row.querySelector(".deleteCodeForm");
+      deleteCodeForm?.addEventListener("submit", (e) => {
+        if (!confirm("Delete code ini? Tindakan ini tidak bisa dibatalkan.")) {
           e.preventDefault();
         }
       });
     });
+
+    // confirm delete user
+    document.querySelectorAll(".userRow").forEach(row => {
+      const deleteUserForm = row.querySelector(".deleteUserForm");
+      deleteUserForm?.addEventListener("submit", (e) => {
+        if (!confirm("Delete user ini? Semua code milik user akan dihapus.")) {
+          e.preventDefault();
+        }
+      });
+    });
+
+    // --- Admin Chat Viewer ---
+    const chatUserSelect = document.getElementById("chatUserSelect");
+    const chatDeviceSelect = document.getElementById("chatDeviceSelect");
+    const chatThreads = document.getElementById("chatThreads");
+    const chatMessages = document.getElementById("chatMessages");
+    const chatActiveThread = document.getElementById("chatActiveThread");
+    const chatReloadBtn = document.getElementById("chatReloadBtn");
+    let ACTIVE_THREAD_ID = null;
+
+    async function adminFetch(url) {
+      const res = await fetch(url, {credentials: "include"});
+      const ct = (res.headers.get("content-type") || "");
+      const data = ct.includes("application/json") ? await res.json() : await res.text();
+      if (!res.ok) throw new Error((data && data.error) || (data && data.detail) || "Request failed");
+      return data;
+    }
+
+    function renderAdminMessage(m) {
+      const role = m.role || "unknown";
+      const content = m.content || "";
+      const ts = m.created_at ? String(m.created_at) : "";
+      const row = document.createElement("div");
+      row.className = "tg-row " + (role === "user" ? "user" : "assistant");
+      const bubble = document.createElement("div");
+      bubble.className = "tg-bubble";
+      const label = (role === "assistant") ? "Xiaozhi" : "User";
+      bubble.innerHTML = `
+        <div class="tg-name">${label}</div>
+        <div class="text-sm">${content.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>
+        <div class="tg-meta">${ts}</div>
+      `;
+      if (role === "assistant") {
+        const avatar = document.createElement("div");
+        avatar.className = "tg-avatar";
+        avatar.textContent = "X";
+        row.appendChild(avatar);
+      }
+      row.appendChild(bubble);
+      return row;
+    }
+
+    async function loadAdminMessages(threadId) {
+      if (!threadId) return;
+      const msgs = await adminFetch(`/api/admin/messages?thread_id=${encodeURIComponent(threadId)}&limit=200`);
+      chatMessages.innerHTML = "";
+      const filtered = (msgs || []).filter(m => m.role === "user" || m.role === "assistant");
+      if (!filtered.length) {
+        chatMessages.innerHTML = `<div class="text-xs text-slate-400">Belum ada pesan.</div>`;
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      filtered.forEach(m => frag.appendChild(renderAdminMessage(m)));
+      chatMessages.appendChild(frag);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function loadAdminThreads(deviceId) {
+      if (!deviceId) return;
+      const threads = await adminFetch(`/api/admin/threads?device_id=${encodeURIComponent(deviceId)}`);
+      chatThreads.innerHTML = "";
+      if (!threads || threads.length === 0) {
+        chatThreads.innerHTML = `<div class="text-xs text-white/60">Belum ada thread.</div>`;
+        return;
+      }
+      threads.forEach(t => {
+        const btn = document.createElement("button");
+        btn.className = "w-full text-left p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 text-white";
+        btn.onclick = () => {
+          ACTIVE_THREAD_ID = t.id;
+          chatActiveThread.textContent = String(t.id);
+          loadAdminMessages(t.id);
+        };
+        btn.innerHTML = `
+          <div class="text-sm font-semibold truncate">${t.title || "New Chat"}</div>
+          <div class="text-xs text-white/60 mt-1">#${t.id} - ${t.updated_at || ""}</div>
+          <div class="text-[11px] text-white/60 mt-1">mode: ${t.mode_title || t.mode_name || "-"}</div>
+        `;
+        chatThreads.appendChild(btn);
+      });
+    }
+
+    async function loadUserDevices(userId) {
+      if (!userId) return;
+      const data = await adminFetch(`/api/admin/user-devices?user_id=${encodeURIComponent(userId)}`);
+      const devices = data.devices || [];
+      chatDeviceSelect.innerHTML = "";
+      if (!devices.length) {
+        chatDeviceSelect.innerHTML = `<option value="">-- belum ada device --</option>`;
+        return;
+      }
+      devices.forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d;
+        opt.textContent = d;
+        chatDeviceSelect.appendChild(opt);
+      });
+      chatDeviceSelect.value = devices[0] || "";
+      loadAdminThreads(chatDeviceSelect.value);
+    }
+
+    chatUserSelect?.addEventListener("change", () => {
+      const uid = chatUserSelect.value;
+      chatThreads.innerHTML = "";
+      chatMessages.innerHTML = "";
+      chatActiveThread.textContent = "-";
+      loadUserDevices(uid).catch(() => {});
+    });
+    chatDeviceSelect?.addEventListener("change", () => {
+      chatThreads.innerHTML = "";
+      chatMessages.innerHTML = "";
+      chatActiveThread.textContent = "-";
+      loadAdminThreads(chatDeviceSelect.value).catch(() => {});
+    });
+    chatReloadBtn?.addEventListener("click", () => {
+      if (chatDeviceSelect.value) loadAdminThreads(chatDeviceSelect.value);
+    });
+
+    // --- Monitoring ---
+    async function loadMetrics() {
+      try {
+        const data = await adminFetch("/api/admin/metrics");
+        const up = data.uptime_sec || 0;
+        const upH = Math.floor(up / 3600);
+        const upM = Math.floor((up % 3600) / 60);
+        const upS = Math.floor(up % 60);
+        document.getElementById("mUptime").textContent = `${upH}h ${upM}m ${upS}s`;
+
+        document.getElementById("mHttpRate").textContent = `${data.http_last_1m || 0} / ${data.http_last_5m || 0}`;
+        document.getElementById("mHttpTotal").textContent = data.http_total ?? "-";
+        document.getElementById("mHttpErr").textContent = data.http_errors ?? "-";
+
+        document.getElementById("mMsgRate").textContent = `${data.msg_last_1m || 0} / ${data.msg_last_5m || 0}`;
+        document.getElementById("mMsgTotal").textContent = data.msg_total ?? "-";
+
+        document.getElementById("mWsClients").textContent = data.ws_clients ?? "-";
+        document.getElementById("mMcpWorkers").textContent = data.mcp_workers ?? "-";
+        document.getElementById("mMcpEnabled").textContent = data.mcp_supervisor_enabled ? "yes" : "no";
+        document.getElementById("mThreads").textContent = data.threads ?? "-";
+
+        if (data.process_mem_mb != null) {
+          document.getElementById("mMem").textContent = `${data.process_mem_mb.toFixed(1)} MB`;
+        } else {
+          document.getElementById("mMem").textContent = "n/a";
+        }
+
+        const cTot = data.codes_total;
+        const cCon = data.codes_connected;
+        document.getElementById("mCodes").textContent =
+          (cCon == null || cTot == null) ? "-" : `${cCon} / ${cTot}`;
+      } catch (e) {
+        // keep last values
+      }
+    }
+
+    loadMetrics();
+    setInterval(loadMetrics, 5000);
   </script>
 </body>
 </html>

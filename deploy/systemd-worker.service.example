@@ -1,0 +1,14 @@
+[Unit]
+Description=SciG MCP Worker
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/scig_mode_mcp_fastapi
+EnvironmentFile=/opt/scig_mode_mcp_fastapi/.env
+ExecStart=/opt/scig_mode_mcp_fastapi/venv/bin/python /opt/scig_mode_mcp_fastapi/worker.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

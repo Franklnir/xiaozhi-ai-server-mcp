@@ -215,7 +215,8 @@ class Settings(BaseSettings):
     app_env: str = Field(default="development", validation_alias=AliasChoices("APP_ENV"))
     app_debug: bool = Field(default=True, validation_alias=AliasChoices("APP_DEBUG"))
     app_host: str = Field(default="0.0.0.0", validation_alias=AliasChoices("APP_HOST"))
-    app_port: int = Field(default=8000, validation_alias=AliasChoices("APP_PORT"))
+    # Railway: biasanya pakai PORT
+    app_port: int = Field(default=8000, validation_alias=AliasChoices("PORT", "APP_PORT"))
 
     # Security
     secret_key: str = Field(default="CHANGE_ME_IN_PRODUCTION", validation_alias=AliasChoices("SECRET_KEY"))
@@ -225,8 +226,11 @@ class Settings(BaseSettings):
     admin_master_code: str = Field(default="", validation_alias=AliasChoices("ADMIN_MASTER_CODE"))
     admin_master_code_hash: Optional[str] = Field(default=None, validation_alias=AliasChoices("ADMIN_MASTER_CODE_HASH"))
 
-    # DB
-    database_url: str = Field(..., validation_alias=AliasChoices("DATABASE_URL", "MYSQL_URL"))
+    # DB (Railway: DATABASE_URL atau MYSQL_URL atau MYSQL_PUBLIC_URL)
+    database_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("DATABASE_URL", "MYSQL_URL", "MYSQL_PUBLIC_URL"),
+    )
 
     # WS keepalive/reconnect
     mcp_ws_ping_interval: int = Field(default=15, validation_alias=AliasChoices("MCP_WS_PING_INTERVAL"))
@@ -489,6 +493,60 @@ def _retention_days() -> int:
     return max(7, min(days, 365))
 
 
+def resolve_database_url() -> str:
+    """
+    Railway-safe DB URL resolver:
+    - Prefer settings.database_url (DATABASE_URL/MYSQL_URL/MYSQL_PUBLIC_URL)
+    - Fallback env vars directly
+    - Fallback build from MYSQLHOST/MYSQLUSER/MYSQLPASSWORD/MYSQLDATABASE/MYSQLPORT (Railway-style)
+    - Convert mysql:// -> mysql+pymysql://
+    - Ensure charset=utf8mb4
+    - Guard unresolved ${{...}} and accidental duplication
+    """
+    raw = (settings.database_url or "").strip()
+
+    if not raw:
+        raw = (os.getenv("DATABASE_URL") or os.getenv("MYSQL_URL") or os.getenv("MYSQL_PUBLIC_URL") or "").strip()
+
+    if not raw:
+        host = (os.getenv("MYSQLHOST") or "").strip()
+        user = (os.getenv("MYSQLUSER") or "").strip()
+        password = (os.getenv("MYSQLPASSWORD") or "").strip()
+        dbname = (os.getenv("MYSQLDATABASE") or "").strip()
+        port = (os.getenv("MYSQLPORT") or "3306").strip()
+
+        if host and user and password and dbname:
+            u = urllib.parse.quote(user, safe="")
+            p = urllib.parse.quote(password, safe="")
+            raw = f"mysql://{u}:{p}@{host}:{port}/{dbname}"
+
+    raw = raw.strip().strip('"').strip("'")
+
+    if "${{" in raw:
+        raise RuntimeError(
+            "DATABASE_URL/MYSQL_URL masih berupa Railway reference (${{...}}) dan belum ter-resolve. "
+            "Pastikan set-nya di Railway Variables service APP (bukan di file .env repo)."
+        )
+
+    # Guard dobel paste (tanpa bocorin url)
+    if raw.count("mysql://") > 1 or raw.count("mysql+pymysql://") > 1:
+        raise RuntimeError("DATABASE_URL kelihatan kepaste dobel (contoh: ${{MySQL.MYSQL_URL}}${{MySQL.MYSQL_URL}}).")
+
+    if not raw:
+        raise RuntimeError("DATABASE_URL/MYSQL_URL belum di-set. Set di Railway Variables dulu.")
+
+    if raw.startswith("mysql://"):
+        raw = raw.replace("mysql://", "mysql+pymysql://", 1)
+
+    if raw.startswith("mysql+pymysql://"):
+        if "?" not in raw:
+            raw += "?charset=utf8mb4"
+        elif "charset=" not in raw:
+            raw += "&charset=utf8mb4"
+
+    return raw
+
+
 logging.basicConfig(
     level=getattr(logging, (settings.log_level or "INFO").upper(), logging.INFO),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -496,11 +554,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("scig_mcp")
 
-# FIX KHUSUS RAILWAY: Ubah mysql:// jadi mysql+pymysql://
-final_db_url = settings.database_url
-if final_db_url.startswith("mysql://"):
-    final_db_url = final_db_url.replace("mysql://", "mysql+pymysql://", 1)
-
+# DB engine (Railway-safe)
+final_db_url = resolve_database_url()
 engine = create_engine(final_db_url, pool_pre_ping=True, pool_recycle=1800)
 
 

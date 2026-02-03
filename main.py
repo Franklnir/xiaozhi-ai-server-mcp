@@ -5,6 +5,7 @@ import asyncio
 import threading
 import time
 import urllib.parse
+import os  # Penting untuk membaca env vars di Railway
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -26,6 +27,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
+# Import module lokal
 from auth import (
     create_access_token,
     get_current_user,
@@ -65,7 +67,6 @@ from db import (
     db_create_user,
     db_claim_mcp_code,
     db_list_mcp_codes,
-    db_list_users,
     db_list_admin_audit_logs,
     db_create_mcp_code,
     db_update_mcp_code,
@@ -106,13 +107,13 @@ from db import (
     db_list_user_devices,
     db_list_threads_for_device_any,
     db_get_messages_page_admin,
+    db_list_users,  # <--- DITAMBAHKAN: Memperbaiki error "db_list_users is not defined"
 )
 from mcp import mcp_supervisor, stop_mcp_worker, _mcp_text_result
 
 # =========================================================
 # 10) FASTAPI APP + TEMPLATE ENGINE
 # =========================================================
-
 
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = BASE_DIR / "templates"
@@ -428,7 +429,9 @@ async def admin_page(request: Request, current_admin: dict = Depends(get_current
         if isinstance(le, datetime):
             c["last_err_at"] = le.strftime("%Y-%m-%d %H:%M:%S")
 
+    # ERROR SEBELUMNYA DI SINI (sekarang sudah di-import)
     users = db_list_users(engine)
+    
     for u in users:
         uc = u.get("created_at")
         uu = u.get("updated_at")
@@ -1031,20 +1034,34 @@ async def api_admin_metrics(
 
 
 # =========================================================
-# Entry
+# Entry (UPDATED FOR RAILWAY)
 # =========================================================
 
 if __name__ == "__main__":
+    import os
+    
+    # 1. Gunakan PORT dari Railway environment jika ada
+    port_env = os.environ.get("PORT")
+    if port_env:
+        port = int(port_env)
+    else:
+        # Fallback ke settings jika di local
+        port = int(settings.app_port) if settings.app_port else 8000
+    
+    # 2. Host wajib 0.0.0.0 agar bisa diakses dari luar container Docker
+    host = "0.0.0.0"
+
     logger.info(
-        f"Starting {settings.app_name} on {settings.app_host}:{settings.app_port} | "
+        f"Starting {settings.app_name} on {host}:{port} | "
         f"ENV={settings.app_env} | "
         f"LLM={settings.llm_provider} | FORCE_DEVICE_ID={(settings.force_device_id or '')!r} | "
         f"ADMIN_CODE_SET={bool((settings.admin_master_code or '').strip() or (settings.admin_master_code_hash or '').strip())}"
     )
+    
     uvicorn.run(
         "main:app",
-        host=settings.app_host,
-        port=settings.app_port,
+        host=host,
+        port=port,
         reload=bool(settings.app_debug),
         log_level=(settings.log_level or "info").lower(),
     )

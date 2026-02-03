@@ -496,7 +496,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger("scig_mcp")
 
-engine = create_engine(settings.database_url, pool_pre_ping=True, pool_recycle=1800)
+# FIX KHUSUS RAILWAY: Ubah mysql:// jadi mysql+pymysql://
+final_db_url = settings.database_url
+if final_db_url.startswith("mysql://"):
+    final_db_url = final_db_url.replace("mysql://", "mysql+pymysql://", 1)
+
+engine = create_engine(final_db_url, pool_pre_ping=True, pool_recycle=1800)
 
 
 # =========================================================
@@ -2385,5 +2390,3 @@ async def cleanup_worker(engine: Engine) -> None:
         except Exception as e:
             logger.warning(f"[CLEANUP] Error: {e}")
         await asyncio.sleep(interval * 60)
-
-

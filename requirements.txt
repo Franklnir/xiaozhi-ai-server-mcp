@@ -13,3 +13,4 @@ cryptography
 alembic
 PyJWT==2.10.1
 pymysql
+psutil

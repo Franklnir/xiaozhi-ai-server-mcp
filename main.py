@@ -5,7 +5,7 @@ import asyncio
 import threading
 import time
 import urllib.parse
-import os  # Penting untuk membaca env vars di Railway
+import os  # PENTING: Untuk membaca variabel environment Railway
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -107,7 +107,7 @@ from db import (
     db_list_user_devices,
     db_list_threads_for_device_any,
     db_get_messages_page_admin,
-    db_list_users,  # <--- DITAMBAHKAN: Memperbaiki error "db_list_users is not defined"
+    db_list_users,  # <--- FIX: Fungsi ini sudah ditambahkan ke import
 )
 from mcp import mcp_supervisor, stop_mcp_worker, _mcp_text_result
 
@@ -429,7 +429,7 @@ async def admin_page(request: Request, current_admin: dict = Depends(get_current
         if isinstance(le, datetime):
             c["last_err_at"] = le.strftime("%Y-%m-%d %H:%M:%S")
 
-    # ERROR SEBELUMNYA DI SINI (sekarang sudah di-import)
+    # FIX: Fungsi ini sekarang sudah di-import dan ada di db.py
     users = db_list_users(engine)
     
     for u in users:
@@ -1038,17 +1038,14 @@ async def api_admin_metrics(
 # =========================================================
 
 if __name__ == "__main__":
-    import os
-    
-    # 1. Gunakan PORT dari Railway environment jika ada
-    port_env = os.environ.get("PORT")
-    if port_env:
-        port = int(port_env)
+    # FIX: Pastikan aplikasi berjalan pada port yang diberikan oleh Railway
+    # dan menggunakan host 0.0.0.0 agar bisa diakses dari luar container
+    port_str = os.environ.get("PORT")
+    if port_str:
+        port = int(port_str)
     else:
-        # Fallback ke settings jika di local
         port = int(settings.app_port) if settings.app_port else 8000
     
-    # 2. Host wajib 0.0.0.0 agar bisa diakses dari luar container Docker
     host = "0.0.0.0"
 
     logger.info(

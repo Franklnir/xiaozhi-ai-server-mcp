@@ -213,7 +213,8 @@ class Settings(BaseSettings):
     # App
     app_name: str = Field(default="SciG Mode MCP", validation_alias=AliasChoices("APP_NAME"))
     app_env: str = Field(default="development", validation_alias=AliasChoices("APP_ENV"))
-    app_debug: bool = Field(default=True, validation_alias=AliasChoices("APP_DEBUG"))
+    # Default production-safe (no auto-reload). Local dev bisa override APP_DEBUG=true.
+    app_debug: bool = Field(default=False, validation_alias=AliasChoices("APP_DEBUG"))
     app_host: str = Field(default="0.0.0.0", validation_alias=AliasChoices("APP_HOST"))
     # Railway: biasanya pakai PORT
     app_port: int = Field(default=8000, validation_alias=AliasChoices("PORT", "APP_PORT"))
@@ -229,7 +230,14 @@ class Settings(BaseSettings):
     # DB (Railway: DATABASE_URL atau MYSQL_URL atau MYSQL_PUBLIC_URL)
     database_url: Optional[str] = Field(
         default=None,
-        validation_alias=AliasChoices("DATABASE_URL", "MYSQL_URL", "MYSQL_PUBLIC_URL"),
+        validation_alias=AliasChoices(
+            "DATABASE_URL",
+            "DATABASE_PRIVATE_URL",
+            "DATABASE_PUBLIC_URL",
+            "MYSQL_URL",
+            "MYSQL_PRIVATE_URL",
+            "MYSQL_PUBLIC_URL",
+        ),
     )
 
     # WS keepalive/reconnect
@@ -496,7 +504,7 @@ def _retention_days() -> int:
 def resolve_database_url() -> str:
     """
     Railway-safe DB URL resolver:
-    - Prefer settings.database_url (DATABASE_URL/MYSQL_URL/MYSQL_PUBLIC_URL)
+    - Prefer settings.database_url (DATABASE_URL / *_PRIVATE_URL / *_PUBLIC_URL / MYSQL_*)
     - Fallback env vars directly
     - Fallback build from MYSQLHOST/MYSQLUSER/MYSQLPASSWORD/MYSQLDATABASE/MYSQLPORT (Railway-style)
     - Convert mysql:// -> mysql+pymysql://
@@ -506,7 +514,15 @@ def resolve_database_url() -> str:
     raw = (settings.database_url or "").strip()
 
     if not raw:
-        raw = (os.getenv("DATABASE_URL") or os.getenv("MYSQL_URL") or os.getenv("MYSQL_PUBLIC_URL") or "").strip()
+        raw = (
+            os.getenv("DATABASE_URL")
+            or os.getenv("DATABASE_PRIVATE_URL")
+            or os.getenv("DATABASE_PUBLIC_URL")
+            or os.getenv("MYSQL_URL")
+            or os.getenv("MYSQL_PRIVATE_URL")
+            or os.getenv("MYSQL_PUBLIC_URL")
+            or ""
+        ).strip()
 
     if not raw:
         host = (os.getenv("MYSQLHOST") or "").strip()

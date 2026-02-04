@@ -1,0 +1,15 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+.vscode/
+.idea/
+docs/
+deploy/
+tools/
+*.log
+tmp/
+temp/

@@ -4,60 +4,90 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin - SciG Mode MCP</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  {% include "_neo_theme_head.html" %}
   <style>
-    body {
-      font-family:"Space Grotesk",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      background:
-        radial-gradient(1100px 550px at 15% 10%, #7c3aed 0%, transparent 55%),
-        radial-gradient(900px 500px at 85% 20%, #06b6d4 0%, transparent 55%),
-        #0b1220;
+    .admin-nav-link{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem 0.85rem;
+      border-radius: 14px;
+      border: 2px solid #111;
+      background: #fff7dc;
+      color: #111;
+      font-size: 0.82rem;
+      font-weight: 700;
+      box-shadow: 3px 3px 0 #111;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .admin-nav-link:hover {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0 #111;
+      background: #bce7ff;
+    }
+    .admin-nav-link.active {
+      background: #8ce99a;
+      color: #111;
     }
 
-    /* Telegram-like chat viewer */
     .tg-shell{
       background:
-        radial-gradient(circle at 12px 12px, rgba(148,163,184,.14) 1px, transparent 1px),
-        radial-gradient(circle at 4px 4px, rgba(148,163,184,.10) 1px, transparent 1px),
-        #eef2f7;
-      background-size: 24px 24px, 12px 12px;
-      border:1px solid #dbe3ee;
-      border-radius:18px;
+        radial-gradient(circle at 9px 9px, rgba(0,0,0,.1) 1px, transparent 1.2px) 0 0 / 20px 20px,
+        #fffef8;
+      border: 2px solid #111;
+      border-radius: 18px;
     }
-    .tg-row{display:flex;gap:10px;margin:12px 0;align-items:flex-end}
-    .tg-row.user{justify-content:flex-end}
-    .tg-row.assistant{justify-content:flex-start}
+    .tg-row { display: flex; gap: 10px; margin: 12px 0; align-items: flex-end; }
+    .tg-row.user { justify-content: flex-end; }
+    .tg-row.assistant { justify-content: flex-start; }
     .tg-avatar{
-      width:28px;height:28px;border-radius:999px;
-      display:flex;align-items:center;justify-content:center;
-      background:#c7d2fe;color:#1e1b4b;font-weight:700;font-size:12px;
-      box-shadow:0 2px 6px rgba(15,23,42,.12);
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fffef8;
+      color: #111;
+      font-weight: 700;
+      font-size: 12px;
+      border: 2px solid #111;
+      box-shadow: 3px 3px 0 #111;
     }
     .tg-bubble{
-      max-width:74%;
-      padding:10px 12px;
-      white-space:pre-wrap;word-break:break-word;
-      box-shadow:0 6px 16px rgba(15,23,42,.08);
-      border:1px solid transparent;
+      max-width: 74%;
+      padding: 10px 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      box-shadow: 3px 3px 0 #111;
+      border: 2px solid #111;
     }
     .tg-row.user .tg-bubble{
-      background:#d7f0ff;border-color:#b6ddff;border-radius:16px 16px 6px 16px;
+      background: #b8e1ff;
+      border-radius: 16px 16px 6px 16px;
     }
     .tg-row.assistant .tg-bubble{
-      background:#ffffff;border-color:#e2e8f0;border-radius:16px 16px 16px 6px;
+      background: #ffd7ad;
+      border-radius: 16px 16px 16px 6px;
     }
-    .tg-name{font-weight:600;font-size:11px;color:#334155;margin-bottom:4px}
-    .tg-meta{margin-top:6px;font-size:10px;color:#64748b;text-align:right}
+    .tg-name { font-weight: 700; font-size: 11px; color: #111; margin-bottom: 4px; }
+    .tg-meta { margin-top: 6px; font-size: 10px; color: #222; text-align: right; }
+
+    .admin-hero {
+      border: 3px solid #111;
+      box-shadow: 6px 6px 0 #111;
+      border-radius: 22px;
+      padding: 0.9rem 1rem;
+      background: #fffef7;
+    }
   </style>
 </head>
 
-<body class="min-h-screen p-4 text-white">
-  <div class="max-w-6xl mx-auto space-y-4">
+<body class="min-h-screen">
+  <div class="max-w-[1500px] w-full mx-auto p-4 md:p-8 space-y-4">
 
-    <div class="flex items-center justify-between gap-3">
+    <div class="admin-hero flex items-center justify-between gap-3">
       <div>
         <h1 class="text-2xl font-bold">Admin Panel</h1>
         <p class="text-sm text-white/70">Kelola code MCP. Token disembunyikan demi keamanan.</p>
@@ -74,7 +104,17 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="bg-white/10 border border-white/15 rounded-2xl p-3 backdrop-blur">
+      <div class="flex flex-wrap gap-2">
+        <a href="/admin/codes" class="admin-nav-link{% if active_page == 'codes' %} active{% endif %}">Code MCP</a>
+        <a href="/admin/users" class="admin-nav-link{% if active_page == 'users' %} active{% endif %}">Tambah/User</a>
+        <a href="/admin/audit" class="admin-nav-link{% if active_page == 'audit' %} active{% endif %}">Audit Logs</a>
+        <a href="/admin/monitoring" class="admin-nav-link{% if active_page == 'monitoring' %} active{% endif %}">Monitoring</a>
+        <a href="/admin/chat-viewer" class="admin-nav-link{% if active_page == 'chat_viewer' %} active{% endif %}">Chat Viewer</a>
+      </div>
+    </div>
+
+    <div id="section-codes" class="grid grid-cols-1 lg:grid-cols-3 gap-4{% if active_page != 'codes' %} hidden{% endif %}">
       <!-- Create code -->
       <div class="lg:col-span-1 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur">
         <h2 class="font-semibold mb-2">Buat Code Baru</h2>
@@ -83,6 +123,7 @@
         </p>
 
         <form method="POST" action="/admin/codes" class="space-y-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <div>
             <label class="block text-xs text-white/70 mb-1">Token / WS URL</label>
             <textarea name="token" required rows="4"
@@ -172,6 +213,7 @@
                 <td class="px-3 py-2 align-top">
                   <div class="flex flex-col gap-2">
                     <form method="POST" action="/admin/codes/unclaim" class="unclaimForm">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="code_id" value="{{ c.id }}">
                       <button type="submit"
                         class="w-full px-3 py-2 rounded-xl bg-amber-600/80 hover:bg-amber-500 transition text-xs font-semibold">
@@ -181,6 +223,7 @@
                     <details class="rounded-lg border border-white/10 p-2 bg-white/5">
                       <summary class="cursor-pointer text-xs text-cyan-200">Edit token</summary>
                       <form method="POST" action="/admin/codes/update" class="mt-2 space-y-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <input type="hidden" name="code_id" value="{{ c.id }}">
                         <textarea name="token" rows="3" required
                           class="w-full bg-black/25 border border-white/15 rounded-lg px-2 py-1 text-xs"
@@ -194,6 +237,7 @@
                     <details class="rounded-lg border border-white/10 p-2 bg-white/5">
                       <summary class="cursor-pointer text-xs text-cyan-200">Edit code (10 karakter)</summary>
                       <form method="POST" action="/admin/codes/update-code" class="mt-2 space-y-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <input type="hidden" name="code_id" value="{{ c.id }}">
                         <input name="code" maxlength="10" required
                           class="w-full bg-black/25 border border-white/15 rounded-lg px-2 py-1 text-xs font-mono"
@@ -205,6 +249,7 @@
                       </form>
                     </details>
                     <form method="POST" action="/admin/codes/delete" class="deleteCodeForm">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="code_id" value="{{ c.id }}">
                       <button type="submit"
                         class="w-full px-3 py-2 rounded-xl bg-red-600/80 hover:bg-red-500 transition text-xs font-semibold">
@@ -225,24 +270,19 @@
       </div>
     </div>
 
-    {% if err %}
-      <div class="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-100 text-sm">
-        Error: {{ err }}
-      </div>
-    {% endif %}
-    {% if ok %}
-      <div class="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-100 text-sm">
-        OK: {{ ok }}
-      </div>
-    {% endif %}
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+    <details id="section-users" class="mt-4 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur{% if active_page != 'users' %} hidden{% endif %}"{% if active_page == 'users' %} open{% endif %}>
+      <summary class="cursor-pointer flex items-center justify-between gap-3">
+        <h2 class="font-semibold">Tambah User</h2>
+        <div class="text-xs text-white/60">Klik untuk buka/tutup.</div>
+      </summary>
+      <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
       <!-- Create user -->
       <div class="lg:col-span-1 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur">
-        <h2 class="font-semibold mb-2">Tambah User</h2>
+        <h2 class="font-semibold mb-2">Form User Baru</h2>
         <p class="text-xs text-white/70 mb-3">Buat akun user/admin secara manual.</p>
 
         <form method="POST" action="/admin/users" class="space-y-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <div>
             <label class="block text-xs text-white/70 mb-1">Username</label>
             <input name="username" required
@@ -329,6 +369,7 @@
                       <details class="rounded-lg border border-white/10 p-2 bg-white/5">
                         <summary class="cursor-pointer text-xs text-cyan-200">Edit user</summary>
                         <form method="POST" action="/admin/users/update" class="mt-2 space-y-2">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                           <input type="hidden" name="user_id" value="{{ u.id }}">
                           <select name="role"
                             class="w-full bg-black/25 border border-white/15 rounded-lg px-2 py-1 text-xs">
@@ -345,6 +386,7 @@
                         </form>
                       </details>
                       <form method="POST" action="/admin/users/delete" class="deleteUserForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <input type="hidden" name="user_id" value="{{ u.id }}">
                         <button type="submit"
                           class="w-full px-3 py-2 rounded-xl bg-red-600/80 hover:bg-red-500 transition text-xs font-semibold">
@@ -368,13 +410,53 @@
           Status Online berdasarkan koneksi MCP aktif pada salah satu code milik user.
         </p>
       </div>
-    </div>
-
-    <div class="mt-4 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur">
-      <div class="flex items-center justify-between gap-3">
-        <h2 class="font-semibold">Audit Logs (Admin)</h2>
-        <div class="text-xs text-white/60">Menampilkan 200 log terbaru.</div>
       </div>
+    </details>
+
+    <details id="section-audit" class="mt-4 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur{% if active_page != 'audit' %} hidden{% endif %}"{% if active_page == 'audit' %} open{% endif %}>
+      <summary class="cursor-pointer flex items-center justify-between gap-3">
+        <h2 class="font-semibold">Audit Logs (Admin)</h2>
+        <div class="text-xs text-white/60">Filter + pagination. Klik untuk buka/tutup.</div>
+      </summary>
+
+      <form method="GET" action="/admin/audit" class="mt-4 grid grid-cols-1 md:grid-cols-6 gap-2">
+        <input
+          name="audit_admin"
+          value="{{ audit.filters.admin_username }}"
+          class="bg-black/25 border border-white/15 rounded-xl px-3 py-2 text-xs"
+          placeholder="Admin username">
+        <input
+          name="audit_action"
+          value="{{ audit.filters.action }}"
+          class="bg-black/25 border border-white/15 rounded-xl px-3 py-2 text-xs"
+          placeholder="Action">
+        <input
+          type="date"
+          name="audit_from"
+          value="{{ audit.filters.date_from }}"
+          class="bg-black/25 border border-white/15 rounded-xl px-3 py-2 text-xs">
+        <input
+          type="date"
+          name="audit_to"
+          value="{{ audit.filters.date_to }}"
+          class="bg-black/25 border border-white/15 rounded-xl px-3 py-2 text-xs">
+        <select
+          name="audit_page_size"
+          class="bg-black/25 border border-white/15 rounded-xl px-3 py-2 text-xs">
+          <option value="25" {% if audit.page_size == 25 %}selected{% endif %}>25 / halaman</option>
+          <option value="50" {% if audit.page_size == 50 %}selected{% endif %}>50 / halaman</option>
+          <option value="100" {% if audit.page_size == 100 %}selected{% endif %}>100 / halaman</option>
+        </select>
+        <div class="flex gap-2">
+          <button class="w-full px-3 py-2 rounded-xl bg-cyan-600/80 hover:bg-cyan-500 transition text-xs font-semibold">
+            Terapkan
+          </button>
+          <a href="/admin/audit"
+             class="w-full px-3 py-2 text-center rounded-xl bg-slate-700/80 hover:bg-slate-600 transition text-xs font-semibold">
+            Reset
+          </a>
+        </div>
+      </form>
 
       <div class="mt-4 overflow-x-auto rounded-xl border border-white/10">
         <table class="min-w-full text-sm" id="auditTable">
@@ -389,8 +471,8 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-white/10">
-            {% if logs %}
-              {% for l in logs %}
+            {% if audit.logs %}
+              {% for l in audit.logs %}
               <tr>
                 <td class="px-3 py-2 align-top text-xs">{{ l.created_at }}</td>
                 <td class="px-3 py-2 align-top text-xs">
@@ -418,55 +500,134 @@
           </tbody>
         </table>
       </div>
-    </div>
 
-    <div class="mt-4 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur">
-      <div class="flex items-center justify-between gap-3">
-        <h2 class="font-semibold">Monitoring</h2>
-        <div class="text-xs text-white/60">Refresh otomatis tiap 5 detik.</div>
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-white/70">
+        <div>
+          Page {{ audit.page }} / {{ audit.total_pages }} | Total logs: {{ audit.total }}
+        </div>
+        <div class="flex items-center gap-2">
+          {% if audit.page > 1 %}
+            <a href="/admin/audit?audit_page={{ audit.page - 1 }}&audit_page_size={{ audit.page_size }}&audit_admin={{ audit.filters.admin_username }}&audit_action={{ audit.filters.action }}&audit_from={{ audit.filters.date_from }}&audit_to={{ audit.filters.date_to }}"
+               class="px-3 py-1.5 rounded-lg bg-slate-700/80 hover:bg-slate-600 transition">
+              Prev
+            </a>
+          {% endif %}
+          {% if audit.page < audit.total_pages %}
+            <a href="/admin/audit?audit_page={{ audit.page + 1 }}&audit_page_size={{ audit.page_size }}&audit_admin={{ audit.filters.admin_username }}&audit_action={{ audit.filters.action }}&audit_from={{ audit.filters.date_from }}&audit_to={{ audit.filters.date_to }}"
+               class="px-3 py-1.5 rounded-lg bg-slate-700/80 hover:bg-slate-600 transition">
+              Next
+            </a>
+          {% endif %}
+        </div>
       </div>
+    </details>
+
+    <details id="section-monitoring" class="mt-4 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur{% if active_page != 'monitoring' %} hidden{% endif %}"{% if active_page == 'monitoring' %} open{% endif %}>
+      <summary class="cursor-pointer flex items-center justify-between gap-3">
+        <h2 class="font-semibold">Monitoring</h2>
+        <div class="text-xs text-white/60">Refresh otomatis tiap 5 detik. Klik untuk buka/tutup.</div>
+      </summary>
+
+      <div id="mAlerts" class="mt-4 hidden p-3 rounded-xl border text-sm"></div>
 
       <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
-          <div class="text-xs text-white/60">Uptime</div>
+        <div id="cardUptime" class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-white/60">Uptime</div>
+            <button type="button" data-m-refresh="uptime" class="px-2 py-1 text-[11px] rounded-md bg-white/10 hover:bg-white/20">Refresh</button>
+          </div>
           <div class="text-lg font-semibold" id="mUptime">-</div>
+          <div class="text-[11px] text-white/60 mt-1">Updated: <span id="mUptimeAt">-</span></div>
         </div>
-        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
-          <div class="text-xs text-white/60">HTTP (1m / 5m)</div>
+
+        <div id="cardHttp" class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-white/60">HTTP (1m / 5m)</div>
+            <button type="button" data-m-refresh="http" class="px-2 py-1 text-[11px] rounded-md bg-white/10 hover:bg-white/20">Refresh</button>
+          </div>
           <div class="text-lg font-semibold" id="mHttpRate">-</div>
           <div class="text-xs text-white/60 mt-1">Total: <span id="mHttpTotal">-</span> | Errors: <span id="mHttpErr">-</span></div>
+          <div class="text-xs text-white/60 mt-1">Error 1m: <span id="mHttpErrRate">-</span></div>
+          <div class="text-[11px] text-white/60 mt-1">Updated: <span id="mHttpAt">-</span></div>
         </div>
-        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
-          <div class="text-xs text-white/60">Messages (1m / 5m)</div>
+
+        <div id="cardMessages" class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-white/60">Messages (1m / 5m)</div>
+            <button type="button" data-m-refresh="messages" class="px-2 py-1 text-[11px] rounded-md bg-white/10 hover:bg-white/20">Refresh</button>
+          </div>
           <div class="text-lg font-semibold" id="mMsgRate">-</div>
           <div class="text-xs text-white/60 mt-1">Total: <span id="mMsgTotal">-</span></div>
+          <div class="text-[11px] text-white/60 mt-1">Updated: <span id="mMsgAt">-</span></div>
         </div>
-        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
-          <div class="text-xs text-white/60">WS Clients</div>
+
+        <div id="cardWs" class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-white/60">WS Clients</div>
+            <button type="button" data-m-refresh="ws" class="px-2 py-1 text-[11px] rounded-md bg-white/10 hover:bg-white/20">Refresh</button>
+          </div>
           <div class="text-lg font-semibold" id="mWsClients">-</div>
+          <div class="text-[11px] text-white/60 mt-1">Updated: <span id="mWsAt">-</span></div>
         </div>
-        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
-          <div class="text-xs text-white/60">MCP Workers</div>
+
+        <div id="cardWorkers" class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-white/60">MCP Workers</div>
+            <button type="button" data-m-refresh="workers" class="px-2 py-1 text-[11px] rounded-md bg-white/10 hover:bg-white/20">Refresh</button>
+          </div>
           <div class="text-lg font-semibold" id="mMcpWorkers">-</div>
           <div class="text-xs text-white/60 mt-1">Enabled: <span id="mMcpEnabled">-</span></div>
+          <div class="text-[11px] text-white/60 mt-1">Updated: <span id="mWorkersAt">-</span></div>
         </div>
-        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
-          <div class="text-xs text-white/60">Process Memory</div>
+
+        <div id="cardMem" class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-white/60">Process Memory</div>
+            <button type="button" data-m-refresh="memory" class="px-2 py-1 text-[11px] rounded-md bg-white/10 hover:bg-white/20">Refresh</button>
+          </div>
           <div class="text-lg font-semibold" id="mMem">-</div>
           <div class="text-xs text-white/60 mt-1">Threads: <span id="mThreads">-</span></div>
+          <div class="text-[11px] text-white/60 mt-1">Updated: <span id="mMemAt">-</span></div>
         </div>
-        <div class="rounded-xl border border-white/10 p-3 bg-black/20">
-          <div class="text-xs text-white/60">Codes Connected / Total</div>
-          <div class="text-lg font-semibold" id="mCodes">-</div>
-        </div>
-      </div>
-    </div>
 
-    <div class="mt-4 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur">
-      <div class="flex items-center justify-between gap-3">
-        <h2 class="font-semibold">Chat Viewer (Admin)</h2>
-        <div class="text-xs text-white/60">Baca chat Xiaozhi per user.</div>
+        <div id="cardCodes" class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-white/60">Codes Connected / Total</div>
+            <button type="button" data-m-refresh="codes" class="px-2 py-1 text-[11px] rounded-md bg-white/10 hover:bg-white/20">Refresh</button>
+          </div>
+          <div class="text-lg font-semibold" id="mCodes">-</div>
+          <div class="text-xs text-white/60 mt-1">Error state: <span id="mCodeErrors">-</span></div>
+          <div class="text-[11px] text-white/60 mt-1">Updated: <span id="mCodesAt">-</span></div>
+        </div>
+
+        <div id="cardDb" class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-white/60">DB Status</div>
+            <button type="button" data-m-refresh="db" class="px-2 py-1 text-[11px] rounded-md bg-white/10 hover:bg-white/20">Refresh</button>
+          </div>
+          <div class="text-lg font-semibold" id="mDbStatus">-</div>
+          <div class="text-xs text-white/60 mt-1">Latency: <span id="mDbLatency">-</span></div>
+          <div class="text-xs text-red-200 mt-1" id="mDbError">-</div>
+          <div class="text-[11px] text-white/60 mt-1">Updated: <span id="mDbAt">-</span></div>
+        </div>
+
+        <div id="cardMcpHealth" class="rounded-xl border border-white/10 p-3 bg-black/20">
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-white/60">MCP Health</div>
+            <button type="button" data-m-refresh="mcp" class="px-2 py-1 text-[11px] rounded-md bg-white/10 hover:bg-white/20">Refresh</button>
+          </div>
+          <div class="text-lg font-semibold" id="mMcpHealth">-</div>
+          <div class="text-xs text-white/60 mt-1" id="mMcpDetail">-</div>
+          <div class="text-[11px] text-white/60 mt-1">Updated: <span id="mMcpAt">-</span></div>
+        </div>
       </div>
+    </details>
+
+    <details id="section-chat-viewer" class="mt-4 bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur{% if active_page != 'chat_viewer' %} hidden{% endif %}"{% if active_page == 'chat_viewer' %} open{% endif %}>
+      <summary class="cursor-pointer flex items-center justify-between gap-3">
+        <h2 class="font-semibold">Chat Viewer (Admin)</h2>
+        <div class="text-xs text-white/60">Baca chat Xiaozhi per user. Klik untuk buka/tutup.</div>
+      </summary>
 
       <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
@@ -506,10 +667,45 @@
           <div id="chatMessages" class="max-h-[420px] overflow-auto tg-shell p-3 text-slate-800"></div>
         </div>
       </div>
-    </div>
+    </details>
   </div>
 
+  <div id="toastBox" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
+
   <script>
+    const QUERY_OK = {{ (ok or "") | tojson }};
+    const QUERY_ERR = {{ (err or "") | tojson }};
+    const ACTIVE_PAGE = {{ (active_page or "codes") | tojson }};
+    const OK_LABELS = {
+      code_created: "Code berhasil dibuat",
+      code_updated: "Token code berhasil diperbarui",
+      code_value_updated: "Nilai code berhasil diperbarui",
+      code_deleted: "Code berhasil dihapus",
+      code_unclaimed: "Code berhasil di-unclaim",
+      user_created: "User berhasil dibuat",
+      user_updated: "User berhasil diperbarui",
+      user_deleted: "User berhasil dihapus",
+    };
+
+    function showToast(message, ok=true) {
+      const box = document.getElementById("toastBox");
+      if (!box || !message) return;
+      const el = document.createElement("div");
+      el.className =
+        "max-w-[460px] px-3 py-2 rounded-xl border text-sm shadow-lg backdrop-blur " +
+        (ok
+          ? "bg-emerald-500/20 border-emerald-400/30 text-emerald-100"
+          : "bg-red-500/20 border-red-400/30 text-red-100");
+      el.textContent = message;
+      box.appendChild(el);
+      setTimeout(() => {
+        try { el.remove(); } catch (e) {}
+      }, 4200);
+    }
+
+    if (QUERY_OK) showToast(`OK: ${OK_LABELS[QUERY_OK] || QUERY_OK}`, true);
+    if (QUERY_ERR) showToast(`Error: ${QUERY_ERR}`, false);
+
     // Search filter (by code / username / status)
     const search = document.getElementById("search");
     const rows = Array.from(document.querySelectorAll(".codeRow"));
@@ -679,7 +875,67 @@
     });
 
     // --- Monitoring ---
-    async function loadMetrics() {
+    function markUpdated(ids) {
+      const now = new Date().toLocaleTimeString("id-ID");
+      ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = now;
+      });
+    }
+
+    function setCardAlert(cardId, on) {
+      const card = document.getElementById(cardId);
+      if (!card) return;
+      card.classList.toggle("border-red-400/60", !!on);
+      card.classList.toggle("bg-red-500/10", !!on);
+    }
+
+    function beepAlert() {
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        const ctx = new Ctx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.value = 0.04;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        setTimeout(() => {
+          try {
+            osc.stop();
+            ctx.close();
+          } catch (e) {}
+        }, 140);
+      } catch (e) {}
+    }
+
+    let LAST_ALERT_KEY = "";
+
+    function renderAlerts(alerts) {
+      const box = document.getElementById("mAlerts");
+      if (!box) return;
+      if (!alerts.length) {
+        box.classList.add("hidden");
+        box.classList.remove("bg-red-500/20", "border-red-400/30", "text-red-100");
+        box.innerHTML = "";
+        LAST_ALERT_KEY = "";
+        return;
+      }
+      box.classList.remove("hidden");
+      box.classList.add("bg-red-500/20", "border-red-400/30", "text-red-100");
+      box.innerHTML = alerts.map((a) => `- ${a}`).join("<br>");
+      const key = alerts.join("||");
+      if (key !== LAST_ALERT_KEY) {
+        beepAlert();
+        showToast("Monitoring alert terdeteksi. Cek panel Monitoring.", false);
+      }
+      LAST_ALERT_KEY = key;
+    }
+
+    async function loadMetrics(scope = "all") {
       try {
         const data = await adminFetch("/api/admin/metrics");
         const up = data.uptime_sec || 0;
@@ -691,6 +947,7 @@
         document.getElementById("mHttpRate").textContent = `${data.http_last_1m || 0} / ${data.http_last_5m || 0}`;
         document.getElementById("mHttpTotal").textContent = data.http_total ?? "-";
         document.getElementById("mHttpErr").textContent = data.http_errors ?? "-";
+        document.getElementById("mHttpErrRate").textContent = `${(data.http_error_rate_1m_pct ?? 0).toFixed(2)}%`;
 
         document.getElementById("mMsgRate").textContent = `${data.msg_last_1m || 0} / ${data.msg_last_5m || 0}`;
         document.getElementById("mMsgTotal").textContent = data.msg_total ?? "-";
@@ -710,13 +967,87 @@
         const cCon = data.codes_connected;
         document.getElementById("mCodes").textContent =
           (cCon == null || cTot == null) ? "-" : `${cCon} / ${cTot}`;
+        document.getElementById("mCodeErrors").textContent = data.codes_error ?? "-";
+
+        const dbStatus = data.db_status || {};
+        document.getElementById("mDbStatus").textContent = dbStatus.ok ? "OK" : "DOWN";
+        document.getElementById("mDbLatency").textContent =
+          (dbStatus.latency_ms == null) ? "-" : `${dbStatus.latency_ms} ms`;
+        document.getElementById("mDbError").textContent = dbStatus.error || "-";
+
+        const mcpStatus = data.mcp_status || {};
+        document.getElementById("mMcpHealth").textContent = (mcpStatus.overall || "unknown").toUpperCase();
+        const disc = (mcpStatus.disconnected == null) ? "-" : mcpStatus.disconnected;
+        document.getElementById("mMcpDetail").textContent =
+          `connected=${mcpStatus.connected ?? "-"} / total=${mcpStatus.total ?? "-"} | disconnected=${disc} | errors=${mcpStatus.errors ?? "-"}`;
+
+        const stampMap = {
+          uptime: ["mUptimeAt"],
+          http: ["mHttpAt"],
+          messages: ["mMsgAt"],
+          ws: ["mWsAt"],
+          workers: ["mWorkersAt"],
+          memory: ["mMemAt"],
+          codes: ["mCodesAt"],
+          db: ["mDbAt"],
+          mcp: ["mMcpAt"],
+          all: ["mUptimeAt", "mHttpAt", "mMsgAt", "mWsAt", "mWorkersAt", "mMemAt", "mCodesAt", "mDbAt", "mMcpAt"],
+        };
+        markUpdated(stampMap[scope] || stampMap.all);
+
+        const thresholds = data.thresholds || {};
+        const memLimit = Number(thresholds.mem_mb || 600);
+        const httpErrRateLimit = Number(thresholds.http_error_rate_pct || 20);
+        const mcpWorkersMin = Number(thresholds.mcp_workers_min || 1);
+        const mcpDisconnectedLimit = Number(thresholds.mcp_disconnected_pct || 50);
+
+        const memNow = Number(data.process_mem_mb || 0);
+        const errRateNow = Number(data.http_error_rate_1m_pct || 0);
+        const workersNow = Number(data.mcp_workers || 0);
+        const mcpTotalNow = Number(mcpStatus.total || 0);
+        const mcpDiscNow = Number(mcpStatus.disconnected || 0);
+        const mcpErrNow = Number(mcpStatus.errors || 0);
+        const mcpDiscPct = (mcpTotalNow > 0) ? ((mcpDiscNow / mcpTotalNow) * 100.0) : 0.0;
+        const alerts = [];
+
+        const memAlert = memNow > memLimit;
+        const errRateAlert = (Number(data.http_last_1m || 0) >= 5) && errRateNow > httpErrRateLimit;
+        const workerAlert = Boolean(data.mcp_supervisor_enabled) && workersNow < mcpWorkersMin;
+        const dbAlert = !dbStatus.ok;
+        const mcpDownAlert = (mcpStatus.overall === "down");
+        const mcpDisconnectedAlert = (mcpTotalNow > 0) && (mcpDiscPct >= mcpDisconnectedLimit);
+        const mcpErrorAlert = mcpErrNow > 0;
+        const mcpHealthAlert = mcpDownAlert || mcpDisconnectedAlert || mcpErrorAlert;
+
+        if (memAlert) alerts.push(`Memory tinggi: ${memNow.toFixed(1)} MB (limit ${memLimit} MB)`);
+        if (errRateAlert) alerts.push(`HTTP error rate 1m tinggi: ${errRateNow.toFixed(2)}% (limit ${httpErrRateLimit}%)`);
+        if (workerAlert) alerts.push(`MCP workers rendah: ${workersNow} (minimum ${mcpWorkersMin})`);
+        if (dbAlert) alerts.push(`DB bermasalah: ${dbStatus.error || "query gagal"}`);
+        if (mcpDownAlert) alerts.push("MCP health DOWN: semua code terputus");
+        if (mcpDisconnectedAlert) alerts.push(`MCP disconnected tinggi: ${mcpDiscPct.toFixed(1)}% (limit ${mcpDisconnectedLimit}%)`);
+        if (mcpErrorAlert) alerts.push(`MCP memiliki ${mcpErrNow} code dengan last_error`);
+
+        setCardAlert("cardMem", memAlert);
+        setCardAlert("cardHttp", errRateAlert);
+        setCardAlert("cardWorkers", workerAlert);
+        setCardAlert("cardDb", dbAlert);
+        setCardAlert("cardMcpHealth", mcpHealthAlert);
+        renderAlerts(alerts);
       } catch (e) {
-        // keep last values
+        showToast(`Monitoring fetch error: ${e.message || e}`, false);
       }
     }
 
-    loadMetrics();
-    setInterval(loadMetrics, 5000);
+    document.querySelectorAll("[data-m-refresh]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        loadMetrics(btn.getAttribute("data-m-refresh") || "all");
+      });
+    });
+
+    if (ACTIVE_PAGE === "monitoring") {
+      loadMetrics("all");
+      setInterval(() => loadMetrics("all"), 5000);
+    }
   </script>
 </body>
 </html>

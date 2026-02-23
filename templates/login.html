@@ -5,50 +5,131 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login - SciG Mode MCP</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  {% include "_neo_theme_head.html" %}
   <style>
-    body { background: radial-gradient(1200px 600px at 20% 10%, #1d4ed8 0%, transparent 60%),
-                   radial-gradient(900px 500px at 80% 20%, #7c3aed 0%, transparent 55%),
-                   #0b1220; }
+    .auth-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1.1fr 1fr;
+    }
+    .neo-showcase {
+      border: 3px solid #111;
+      box-shadow: 6px 6px 0 #111;
+      border-radius: 22px;
+      padding: 1.2rem;
+      background: #fff8db;
+      min-height: 420px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      position: relative;
+    }
+    .neo-showcase::before {
+      content: "";
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      border: 3px solid #111;
+      border-radius: 12px;
+      background: #73d0ff;
+      top: -70px;
+      left: -70px;
+      transform: rotate(18deg);
+    }
+    .neo-showcase::after {
+      content: "";
+      position: absolute;
+      width: 170px;
+      height: 170px;
+      border: 3px solid #111;
+      border-radius: 999px;
+      background: #ff9f9f;
+      bottom: -80px;
+      right: -55px;
+    }
+    .auth-card {
+      border: 3px solid #111;
+      box-shadow: 8px 8px 0 #111;
+      border-radius: 24px;
+      background: #fffef8;
+    }
+    .neo-mini-badge {
+      border: 2px solid #111;
+      border-radius: 999px;
+      box-shadow: 3px 3px 0 #111;
+      padding: 0.2rem 0.65rem;
+      background: #8ce99a;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    @media (max-width: 980px) {
+      .auth-grid {
+        grid-template-columns: 1fr;
+      }
+      .neo-showcase {
+        min-height: 210px;
+      }
+    }
   </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
-  <div class="w-full max-w-md bg-white/10 backdrop-blur border border-white/15 rounded-2xl shadow-2xl p-8 text-white">
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold">SciG Mode MCP</h1>
-      <p class="text-sm text-white/70"></p>
-    </div>
+  <div class="w-full max-w-5xl auth-grid">
+    <section class="neo-showcase">
+      <div class="relative z-[2]">
+        <div class="neo-mini-badge">LIVE ACCESS</div>
+        <h1 class="mt-4 text-3xl md:text-4xl font-bold leading-tight">Neo Brutal Dashboard</h1>
+        <p class="mt-3 text-sm max-w-sm">
+          Login untuk kontrol mode, thread, dan routing realtime dalam satu panel.
+        </p>
+      </div>
+      <div class="relative z-[2] grid grid-cols-3 gap-2 text-xs">
+        <div class="p-2 bg-white/10 border border-white/15 rounded-xl">Realtime</div>
+        <div class="p-2 bg-white/10 border border-white/15 rounded-xl">Mode Sync</div>
+        <div class="p-2 bg-white/10 border border-white/15 rounded-xl">MCP Ready</div>
+      </div>
+    </section>
 
-    <form method="POST" action="/login" class="space-y-4">
-      <div>
-        <label class="block text-sm text-white/80 mb-1">Username</label>
-        <input type="text" name="username" required
-          class="w-full bg-black/30 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400">
+    <section class="auth-card p-8">
+      <div class="mb-6">
+        <p class="text-xs font-semibold tracking-wide">SCIG MODE MCP</p>
+        <h2 class="text-2xl font-bold mt-1">Masuk Akun</h2>
+        <p class="text-sm text-white/70 mt-1">Akses panel admin/user dengan visual Neo Brutalism baru.</p>
       </div>
 
-      <div>
-        <label class="block text-sm text-white/80 mb-1">Password</label>
-        <input type="password" name="password" required
-          class="w-full bg-black/30 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400">
+      <form method="POST" action="/login" class="space-y-4">
+        <div>
+          <label class="block text-sm text-white/80 mb-1">Username</label>
+          <input type="text" name="username" required
+            class="w-full bg-black/30 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+
+        <div>
+          <label class="block text-sm text-white/80 mb-1">Password</label>
+          <input type="password" name="password" required
+            class="w-full bg-black/30 border border-white/15 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+
+        <button type="submit"
+          class="w-full py-2.5 rounded-xl font-semibold bg-blue-600 hover:bg-blue-500 transition">
+          Login
+        </button>
+      </form>
+
+      <div class="mt-6 text-sm text-white/80">
+        Belum punya akun?
+        <a href="/register" class="text-blue-300 hover:text-blue-200 underline underline-offset-4">Register di sini</a>
       </div>
 
-      <button type="submit"
-        class="w-full py-2.5 rounded-xl font-semibold bg-blue-600 hover:bg-blue-500 transition">
-        Login
-      </button>
-    </form>
-
-    <div class="mt-6 text-sm text-white/80">
-      Belum punya akun?
-      <a href="/register" class="text-blue-300 hover:text-blue-200 underline underline-offset-4">Register di sini</a>
-    </div>
-
-    {% if error %}
-      <div class="mt-5 p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-100 text-sm">
-        {{ error }}
-      </div>
-    {% endif %}
-
-    <div class="mt-6 text-xs text-white/60"></div>
+      {% if error %}
+        <div class="mt-5 p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-100 text-sm">
+          {{ error }}
+        </div>
+      {% endif %}
+    </section>
   </div>
 </body>
 </html>

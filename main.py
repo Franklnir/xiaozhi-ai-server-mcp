@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import secrets
 import threading
 import time
 import urllib.parse
@@ -66,7 +67,7 @@ from db import (
     db_claim_mcp_code,
     db_list_mcp_codes,
     db_list_users,
-    db_list_admin_audit_logs,
+    db_list_admin_audit_logs_page,
     db_create_mcp_code,
     db_update_mcp_code,
     db_update_mcp_code_value,
@@ -78,6 +79,7 @@ from db import (
     db_list_mcp_codes_for_user,
     db_list_modes,
     db_upsert_mode,
+    db_delete_mode,
     db_get_active_mode_for_device,
     db_set_active_mode_for_device,
     db_get_active_mode,
@@ -143,6 +145,10 @@ class RenderPromptIn(BaseModel):
     vars: Dict[str, Any] = Field(default_factory=dict)
 
 
+class RoleIntroductionIn(BaseModel):
+    style: str = "strict"
+
+
 class ChatNewIn(BaseModel):
     device_id: str
 
@@ -169,6 +175,10 @@ class AdminUnclaimIn(BaseModel):
     code_id: int
 
 
+class ModeDeleteIn(BaseModel):
+    mode_id: int
+
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -190,6 +200,23 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+
+CSRF_COOKIE_NAME = "csrf_token"
+
+
+def _new_csrf_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def _is_valid_csrf(request: Request, form_token: str) -> bool:
+    token_form = (form_token or "").strip()
+    token_cookie = (request.cookies.get(CSRF_COOKIE_NAME) or "").strip()
+    return bool(token_form and token_cookie and secrets.compare_digest(token_form, token_cookie))
+
+
+def _csrf_error_redirect(path: str) -> RedirectResponse:
+    msg = urllib.parse.quote("CSRF token tidak valid. Refresh halaman lalu coba lagi.")
+    return RedirectResponse(url=f"{path}?err={msg}", status_code=303)
 
 
 @asynccontextmanager
@@ -409,11 +436,21 @@ async def dashboard_page(request: Request, current_user: dict = Depends(get_curr
     return HTMLResponse(html)
 
 
-@app.get("/admin", response_class=HTMLResponse)
-async def admin_page(request: Request, current_admin: dict = Depends(get_current_admin)):
+def _render_admin_page(request: Request, current_admin: dict, active_page: str) -> HTMLResponse:
     _guard_admin(request)
     err = request.query_params.get("err")
     ok = request.query_params.get("ok")
+    csrf_token = _new_csrf_token()
+
+    def _q_int(name: str, default: int) -> int:
+        raw = (request.query_params.get(name) or "").strip()
+        if not raw:
+            return default
+        try:
+            return int(raw)
+        except Exception:
+            return default
+
     codes = db_list_mcp_codes(engine)
     for c in codes:
         ca = c.get("created_at")
@@ -444,7 +481,23 @@ async def admin_page(request: Request, current_admin: dict = Depends(get_current
         if isinstance(ler, datetime):
             u["last_err_at"] = ler.strftime("%Y-%m-%d %H:%M:%S")
 
-    logs = db_list_admin_audit_logs(engine, limit=200)
+    audit_page = max(1, _q_int("audit_page", 1))
+    audit_page_size = max(10, min(_q_int("audit_page_size", 50), 200))
+    audit_admin = (request.query_params.get("audit_admin") or "").strip()
+    audit_action = (request.query_params.get("audit_action") or "").strip()
+    audit_from = (request.query_params.get("audit_from") or "").strip()
+    audit_to = (request.query_params.get("audit_to") or "").strip()
+
+    audit = db_list_admin_audit_logs_page(
+        engine,
+        page=audit_page,
+        page_size=audit_page_size,
+        admin_username=audit_admin,
+        action=audit_action,
+        date_from=audit_from,
+        date_to=audit_to,
+    )
+    logs = audit.get("logs", [])
     for l in logs:
         ca = l.get("created_at")
         if isinstance(ca, datetime):
@@ -456,10 +509,52 @@ async def admin_page(request: Request, current_admin: dict = Depends(get_current
         codes=codes,
         users=users,
         logs=logs,
+        audit=audit,
+        csrf_token=csrf_token,
+        active_page=active_page,
         err=err,
         ok=ok,
     )
-    return HTMLResponse(html)
+    response = HTMLResponse(html)
+    response.set_cookie(
+        key=CSRF_COOKIE_NAME,
+        value=csrf_token,
+        httponly=False,
+        samesite=_cookie_samesite(),
+        secure=_should_secure_cookie(request),
+        max_age=4 * 60 * 60,
+    )
+    return response
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request, current_admin: dict = Depends(get_current_admin)):
+    return _render_admin_page(request, current_admin, active_page="codes")
+
+
+@app.get("/admin/codes", response_class=HTMLResponse)
+async def admin_codes_page(request: Request, current_admin: dict = Depends(get_current_admin)):
+    return _render_admin_page(request, current_admin, active_page="codes")
+
+
+@app.get("/admin/users", response_class=HTMLResponse)
+async def admin_users_page(request: Request, current_admin: dict = Depends(get_current_admin)):
+    return _render_admin_page(request, current_admin, active_page="users")
+
+
+@app.get("/admin/audit", response_class=HTMLResponse)
+async def admin_audit_page(request: Request, current_admin: dict = Depends(get_current_admin)):
+    return _render_admin_page(request, current_admin, active_page="audit")
+
+
+@app.get("/admin/monitoring", response_class=HTMLResponse)
+async def admin_monitoring_page(request: Request, current_admin: dict = Depends(get_current_admin)):
+    return _render_admin_page(request, current_admin, active_page="monitoring")
+
+
+@app.get("/admin/chat-viewer", response_class=HTMLResponse)
+async def admin_chat_viewer_page(request: Request, current_admin: dict = Depends(get_current_admin)):
+    return _render_admin_page(request, current_admin, active_page="chat_viewer")
 
 
 @app.post("/admin/codes")
@@ -467,8 +562,11 @@ async def admin_create_code(
     request: Request,
     current_admin: dict = Depends(get_current_admin),
     token: str = Form(...),
+    csrf_token: str = Form(...),
 ):
     _guard_admin(request)
+    if not _is_valid_csrf(request, csrf_token):
+        return _csrf_error_redirect("/admin/codes")
     try:
         created = db_create_mcp_code(engine, token)
         db_add_admin_audit_log(
@@ -481,9 +579,11 @@ async def admin_create_code(
             user_agent=request.headers.get("user-agent"),
             details={"code": created.get("code"), "has_token": True},
         )
+        return RedirectResponse(url="/admin/codes?ok=code_created", status_code=303)
     except Exception as e:
         logger.warning(f"[ADMIN] create code error: {e}")
-    return RedirectResponse(url="/admin", status_code=303)
+        msg = urllib.parse.quote(str(e))
+        return RedirectResponse(url=f"/admin/codes?err={msg}", status_code=303)
 
 
 @app.post("/admin/codes/update")
@@ -492,8 +592,11 @@ async def admin_update_code(
     current_admin: dict = Depends(get_current_admin),
     code_id: int = Form(...),
     token: str = Form(...),
+    csrf_token: str = Form(...),
 ):
     _guard_admin(request)
+    if not _is_valid_csrf(request, csrf_token):
+        return _csrf_error_redirect("/admin/codes")
     try:
         _ = db_update_mcp_code(engine, int(code_id), token)
         db_add_admin_audit_log(
@@ -509,7 +612,9 @@ async def admin_update_code(
         stop_mcp_worker(int(code_id))
     except Exception as e:
         logger.warning(f"[ADMIN] update code error: {e}")
-    return RedirectResponse(url="/admin", status_code=303)
+        msg = urllib.parse.quote(str(e))
+        return RedirectResponse(url=f"/admin/codes?err={msg}", status_code=303)
+    return RedirectResponse(url="/admin/codes?ok=code_updated", status_code=303)
 
 
 @app.post("/admin/codes/update-code")
@@ -518,8 +623,11 @@ async def admin_update_code_value(
     current_admin: dict = Depends(get_current_admin),
     code_id: int = Form(...),
     code: str = Form(...),
+    csrf_token: str = Form(...),
 ):
     _guard_admin(request)
+    if not _is_valid_csrf(request, csrf_token):
+        return _csrf_error_redirect("/admin/codes")
     try:
         updated = db_update_mcp_code_value(engine, int(code_id), code)
         db_add_admin_audit_log(
@@ -534,7 +642,9 @@ async def admin_update_code_value(
         )
     except Exception as e:
         logger.warning(f"[ADMIN] update code value error: {e}")
-    return RedirectResponse(url="/admin", status_code=303)
+        msg = urllib.parse.quote(str(e))
+        return RedirectResponse(url=f"/admin/codes?err={msg}", status_code=303)
+    return RedirectResponse(url="/admin/codes?ok=code_value_updated", status_code=303)
 
 
 @app.post("/admin/codes/delete")
@@ -542,8 +652,11 @@ async def admin_delete_code(
     request: Request,
     current_admin: dict = Depends(get_current_admin),
     code_id: int = Form(...),
+    csrf_token: str = Form(...),
 ):
     _guard_admin(request)
+    if not _is_valid_csrf(request, csrf_token):
+        return _csrf_error_redirect("/admin/codes")
     try:
         stop_mcp_worker(int(code_id))
         deleted = db_delete_mcp_code(engine, int(code_id))
@@ -559,7 +672,9 @@ async def admin_delete_code(
         )
     except Exception as e:
         logger.warning(f"[ADMIN] delete code error: {e}")
-    return RedirectResponse(url="/admin", status_code=303)
+        msg = urllib.parse.quote(str(e))
+        return RedirectResponse(url=f"/admin/codes?err={msg}", status_code=303)
+    return RedirectResponse(url="/admin/codes?ok=code_deleted", status_code=303)
 
 
 @app.post("/admin/codes/unclaim")
@@ -567,8 +682,11 @@ async def admin_unclaim_code(
     request: Request,
     current_admin: dict = Depends(get_current_admin),
     code_id: int = Form(...),
+    csrf_token: str = Form(...),
 ):
     _guard_admin(request)
+    if not _is_valid_csrf(request, csrf_token):
+        return _csrf_error_redirect("/admin/codes")
     try:
         stop_mcp_worker(int(code_id))
         res = db_unclaim_mcp_code(engine, int(code_id), delete_user=True)
@@ -591,7 +709,9 @@ async def admin_unclaim_code(
                 stop_mcp_worker(int(cid))
     except Exception as e:
         logger.warning(f"[ADMIN] unclaim error: {e}")
-    return RedirectResponse(url="/admin", status_code=303)
+        msg = urllib.parse.quote(str(e))
+        return RedirectResponse(url=f"/admin/codes?err={msg}", status_code=303)
+    return RedirectResponse(url="/admin/codes?ok=code_unclaimed", status_code=303)
 
 
 @app.post("/admin/users")
@@ -601,8 +721,11 @@ async def admin_create_user(
     username: str = Form(...),
     password: str = Form(...),
     role: str = Form("user"),
+    csrf_token: str = Form(...),
 ):
     _guard_admin(request)
+    if not _is_valid_csrf(request, csrf_token):
+        return _csrf_error_redirect("/admin/users")
     try:
         created = db_create_user(engine, username, password, role=role)
         db_add_admin_audit_log(
@@ -617,7 +740,9 @@ async def admin_create_user(
         )
     except Exception as e:
         logger.warning(f"[ADMIN] create user error: {e}")
-    return RedirectResponse(url="/admin", status_code=303)
+        msg = urllib.parse.quote(str(e))
+        return RedirectResponse(url=f"/admin/users?err={msg}", status_code=303)
+    return RedirectResponse(url="/admin/users?ok=user_created", status_code=303)
 
 
 @app.post("/admin/users/update")
@@ -627,8 +752,11 @@ async def admin_update_user(
     user_id: int = Form(...),
     role: Optional[str] = Form(None),
     password: Optional[str] = Form(None),
+    csrf_token: str = Form(...),
 ):
     _guard_admin(request)
+    if not _is_valid_csrf(request, csrf_token):
+        return _csrf_error_redirect("/admin/users")
     try:
         updated = db_update_user(engine, int(user_id), password=password, role=role)
         db_add_admin_audit_log(
@@ -643,7 +771,9 @@ async def admin_update_user(
         )
     except Exception as e:
         logger.warning(f"[ADMIN] update user error: {e}")
-    return RedirectResponse(url="/admin", status_code=303)
+        msg = urllib.parse.quote(str(e))
+        return RedirectResponse(url=f"/admin/users?err={msg}", status_code=303)
+    return RedirectResponse(url="/admin/users?ok=user_updated", status_code=303)
 
 
 @app.post("/admin/users/delete")
@@ -651,8 +781,11 @@ async def admin_delete_user(
     request: Request,
     current_admin: dict = Depends(get_current_admin),
     user_id: int = Form(...),
+    csrf_token: str = Form(...),
 ):
     _guard_admin(request)
+    if not _is_valid_csrf(request, csrf_token):
+        return _csrf_error_redirect("/admin/users")
     try:
         res = db_delete_user(engine, int(user_id), delete_codes=True)
         for cid in res.get("code_ids", []) or []:
@@ -674,8 +807,8 @@ async def admin_delete_user(
     except Exception as e:
         logger.warning(f"[ADMIN] delete user error: {e}")
         msg = urllib.parse.quote(str(e))
-        return RedirectResponse(url=f"/admin?err={msg}", status_code=303)
-    return RedirectResponse(url="/admin?ok=user_deleted", status_code=303)
+        return RedirectResponse(url=f"/admin/users?err={msg}", status_code=303)
+    return RedirectResponse(url="/admin/users?ok=user_deleted", status_code=303)
 
 
 # =========================================================
@@ -732,9 +865,22 @@ async def api_modes(current_user: dict = Depends(get_current_user)):
 
 @app.post("/api/modes")
 async def api_save_mode(data: ModeUpsertIn, current_user: dict = Depends(get_current_user)):
-    result = db_upsert_mode(engine, data.name, data.title, data.introduction)
-    await manager.broadcast({"type": "modes_updated", "timestamp": time.time()})
-    return result
+    try:
+        result = db_upsert_mode(engine, data.name, data.title, data.introduction)
+        await manager.broadcast({"type": "modes_updated", "timestamp": time.time()})
+        return result
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+
+@app.delete("/api/modes/{mode_id}")
+async def api_delete_mode(mode_id: int, current_user: dict = Depends(get_current_user)):
+    try:
+        result = db_delete_mode(engine, mode_id=int(mode_id))
+        await manager.broadcast({"type": "modes_updated", "timestamp": time.time()})
+        return result
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
 
 
 @app.get("/api/mode")
@@ -785,8 +931,11 @@ async def api_set_active(data: SetActiveIn, current_user: dict = Depends(get_cur
 
 
 @app.get("/api/role-introduction")
-async def api_role_intro(current_user: dict = Depends(get_current_user)):
-    return _mcp_text_result(build_role_introduction_for_xiaozhi())
+async def api_role_intro(
+    style: str = Query("strict"),
+    current_user: dict = Depends(get_current_user),
+):
+    return _mcp_text_result(build_role_introduction_for_xiaozhi(style=style))
 
 
 @app.post("/api/render-prompt")
@@ -876,6 +1025,7 @@ async def api_messages(
     device_id: str = Query(...),
     limit: int = Query(200),
     before_id: Optional[int] = Query(None),
+    after_id: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     try:
@@ -883,7 +1033,14 @@ async def api_messages(
             db_upsert_user_device(engine, int(current_user["id"]), device_id)
         except Exception:
             pass
-        return db_get_messages_page(engine, device_id, thread_id, limit=limit, before_id=before_id)
+        return db_get_messages_page(
+            engine,
+            device_id,
+            thread_id,
+            limit=limit,
+            before_id=before_id,
+            after_id=after_id,
+        )
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=400)
 
@@ -916,8 +1073,13 @@ async def api_send_chat(data: ChatSendIn, current_user: dict = Depends(get_curre
             return JSONResponse({"error": f"Thread not owned by {device_id} (owner={owner})"}, status_code=403)
 
         active_mode = db_get_active_mode_for_device(engine, device_id)
-        if (active_mode.get("name") or "") != "normal":
-            return JSONResponse({"error": "Send chat hanya diizinkan saat mode NORMAL aktif."}, status_code=403)
+        mode_name = (active_mode.get("name") or "").strip()
+        allowed_chat_modes = {"normal", "f2f_auto", "translation_text"}
+        if mode_name not in allowed_chat_modes:
+            return JSONResponse(
+                {"error": "Kirim chat hanya boleh saat mode Normal / Face-to-Face / Terjemahan aktif."},
+                status_code=403,
+            )
 
         db_add_message(engine, data.thread_id, "user", user_text)
         db_try_set_thread_title_from_first_user(engine, data.thread_id, user_text)
@@ -933,11 +1095,34 @@ async def api_send_chat(data: ChatSendIn, current_user: dict = Depends(get_curre
         rendered_intro = safe_format((mode.get("introduction") or ""), vars_dict)
         system_prompt = build_system_prompt(mode.get("name", ""), rendered_title, rendered_intro)
 
+        # For f2f mode, keep a shorter context window to reduce one-way drift.
+        hist_limit = 60
+        if mode_name == "f2f_auto":
+            hist_limit = 14
+
         full_msgs = db_get_messages_page(engine, device_id, data.thread_id, limit=200)
         llm_msgs: List[Dict[str, str]] = []
-        for m in full_msgs[-60:]:
+        for m in full_msgs[-hist_limit:]:
             if m["role"] in ("user", "assistant"):
                 llm_msgs.append({"role": m["role"], "content": m["content"]})
+
+        # Reinforce bidirectional behavior for every turn in f2f_auto mode.
+        if mode_name == "f2f_auto":
+            src = str(vars_dict.get("source", "bahasa sumber")).strip() or "bahasa sumber"
+            tgt = str(vars_dict.get("target", "bahasa target")).strip() or "bahasa target"
+            turn_rule = (
+                "ATURAN GILIRAN INI (WAJIB):\n"
+                f"- Tentukan arah dari PESAN USER TERAKHIR.\n"
+                f"- Jika pesan terakhir berbahasa '{src}', output wajib berbahasa '{tgt}'.\n"
+                f"- Jika pesan terakhir berbahasa '{tgt}', output wajib berbahasa '{src}'.\n"
+                "- Jika campuran, terjemahkan per segmen ke pasangan lawan tanpa ubah urutan.\n"
+                "- Output hanya hasil terjemahan."
+            )
+            if llm_msgs and llm_msgs[-1].get("role") == "user":
+                last_user = llm_msgs[-1]
+                llm_msgs = llm_msgs[:-1] + [{"role": "system", "content": turn_rule}, last_user]
+            else:
+                llm_msgs.append({"role": "system", "content": turn_rule})
 
         assistant_text = llm_generate(settings.llm_provider, system_prompt, llm_msgs)
         db_add_message(engine, data.thread_id, "assistant", assistant_text)
@@ -1020,13 +1205,72 @@ async def api_admin_metrics(
     snap["ws_clients"] = len(manager.active_connections)
     snap["process_mem_mb"] = _process_mem_mb()
     snap["threads"] = threading.active_count()
+
+    db_status = {"ok": False, "latency_ms": None, "error": None}
+    db_t0 = time.perf_counter()
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("SELECT 1")).scalar()
+        db_status["ok"] = True
+    except Exception as e:
+        db_status["error"] = str(e)
+    finally:
+        db_status["latency_ms"] = round((time.perf_counter() - db_t0) * 1000.0, 2)
+
     try:
         with engine.begin() as conn:
             snap["codes_total"] = int(conn.execute(text("SELECT COUNT(*) FROM auth_codes")).scalar() or 0)
             snap["codes_connected"] = int(conn.execute(text("SELECT COUNT(*) FROM mcp_conn_status WHERE is_connected=1")).scalar() or 0)
+            snap["codes_error"] = int(
+                conn.execute(
+                    text(
+                        "SELECT COUNT(*) FROM mcp_conn_status "
+                        "WHERE last_error IS NOT NULL AND TRIM(last_error)<>''"
+                    )
+                ).scalar()
+                or 0
+            )
     except Exception:
         snap["codes_total"] = None
         snap["codes_connected"] = None
+        snap["codes_error"] = None
+
+    http_1m = int(snap.get("http_last_1m") or 0)
+    http_err_1m = int(snap.get("http_errors_last_1m") or 0)
+    snap["http_error_rate_1m_pct"] = round((http_err_1m / http_1m) * 100.0, 2) if http_1m > 0 else 0.0
+    snap["db_status"] = db_status
+
+    mcp_status = {
+        "overall": "disabled",
+        "connected": snap.get("codes_connected"),
+        "total": snap.get("codes_total"),
+        "errors": snap.get("codes_error"),
+        "disconnected": None,
+    }
+    if settings.mcp_supervisor_enabled:
+        total_codes = snap.get("codes_total")
+        connected_codes = snap.get("codes_connected")
+        error_codes = snap.get("codes_error")
+        if isinstance(total_codes, int) and isinstance(connected_codes, int):
+            disconnected = max(total_codes - connected_codes, 0)
+            mcp_status["disconnected"] = disconnected
+            if total_codes == 0:
+                mcp_status["overall"] = "idle"
+            elif connected_codes == 0:
+                mcp_status["overall"] = "down"
+            elif disconnected > 0 or (isinstance(error_codes, int) and error_codes > 0):
+                mcp_status["overall"] = "degraded"
+            else:
+                mcp_status["overall"] = "healthy"
+        else:
+            mcp_status["overall"] = "unknown"
+    snap["mcp_status"] = mcp_status
+    snap["thresholds"] = {
+        "mem_mb": int(settings.monitor_mem_alert_mb),
+        "http_error_rate_pct": int(settings.monitor_http_error_rate_alert_pct),
+        "mcp_workers_min": int(settings.monitor_mcp_workers_min),
+        "mcp_disconnected_pct": int(settings.monitor_mcp_disconnected_alert_pct),
+    }
     return snap
 
 

@@ -5,6 +5,7 @@ import asyncio
 import json
 import random
 import time
+import socket
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -34,6 +35,7 @@ from db import (
     db_list_modes,
     db_set_active_mode_for_device,
     db_upsert_mode,
+    db_delete_mode,
     build_role_introduction_for_xiaozhi,
     db_add_message,
     db_try_set_thread_title_from_first_user,
@@ -85,7 +87,24 @@ TOOLS: List[MCPTool] = [
             "required": ["name", "title", "introduction"],
         },
     ),
-    MCPTool("get_role_introduction", "Get text for Xiaozhi role config", {"type": "object", "properties": {}}),
+    MCPTool(
+        "delete_mode",
+        "Delete mode by id or name (default modes are protected).",
+        {
+            "type": "object",
+            "properties": {"mode_id": {"type": "integer"}, "name": {"type": "string"}},
+        },
+    ),
+    MCPTool(
+        "get_role_introduction",
+        "Get text for Xiaozhi role config. Optional args: style=strict|natural",
+        {
+            "type": "object",
+            "properties": {
+                "style": {"type": "string", "enum": ["strict", "natural"]},
+            },
+        },
+    ),
     MCPTool(
         "log_chat",
         "Log Xiaozhi conversation into DB (thread + messages). Optional: thread_id",
@@ -281,10 +300,28 @@ async def _handle_tool_call(engine: Engine, name: str, args: Dict[str, Any], man
 
     if name == "upsert_mode":
         res = db_upsert_mode(engine, args["name"], args["title"], args["introduction"])
+        if manager_ref is not None:
+            try:
+                await manager_ref.broadcast({"type": "modes_updated", "timestamp": time.time()})
+            except Exception:
+                pass
+        return _mcp_text_result(res)
+
+    if name == "delete_mode":
+        res = db_delete_mode(
+            engine,
+            mode_id=(int(args["mode_id"]) if args.get("mode_id") is not None else None),
+            mode_name=(args.get("name") or None),
+        )
+        if manager_ref is not None:
+            try:
+                await manager_ref.broadcast({"type": "modes_updated", "timestamp": time.time()})
+            except Exception:
+                pass
         return _mcp_text_result(res)
 
     if name == "get_role_introduction":
-        return _mcp_text_result(build_role_introduction_for_xiaozhi())
+        return _mcp_text_result(build_role_introduction_for_xiaozhi(style=str(args.get("style") or "strict")))
 
     if name == "log_chat":
         incoming = args.get("device_id") or DEFAULT_BUCKET
@@ -466,6 +503,13 @@ async def mcp_worker_for_token(
             code_close = getattr(e, "code", None)
             reason = getattr(e, "reason", "")
             msg = f"Disconnected (code={code_close}, reason={reason!r})"
+            logger.warning(f"[MCP:{code}] {msg}. Reconnect in {delay}s ...")
+            db_upsert_conn_status_err(engine, code_id, msg)
+        except socket.gaierror as e:
+            # DNS resolution failure; back off harder to avoid noisy logs
+            msg = f"DNS error while connecting: {e}"
+            delay = max(300, int(settings.mcp_max_reconnect_delay))
+            max_delay = max(max_delay, delay)
             logger.warning(f"[MCP:{code}] {msg}. Reconnect in {delay}s ...")
             db_upsert_conn_status_err(engine, code_id, msg)
         except Exception as e:

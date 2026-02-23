@@ -4,74 +4,98 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SciG Mode Dashboard - Realtime</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  {% include "_neo_theme_head.html" %}
   <style>
-    :root{
-      --bg:#0a1224;
-      --panel:rgba(15,23,42,.78);
-      --panel-border:rgba(255,255,255,.10);
-      --muted:#94a3b8;
-      --accent:#3b82f6;
+    .card {
+      background: #fffef7;
+      border: 2px solid #111;
+      border-radius: 18px;
+      box-shadow: 4px 4px 0 #111;
     }
-    body{
-      font-family:"Space Grotesk",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      background:
-        radial-gradient(1200px 700px at 15% -10%, rgba(37,99,235,.35), transparent 60%),
-        radial-gradient(900px 600px at 85% 10%, rgba(20,184,166,.25), transparent 55%),
-        var(--bg);
-      color:#e5e7eb;
+    .inp {
+      background: #fffdf7;
+      border: 2px solid #111;
+      border-radius: 14px;
+      padding: 0.6rem 0.75rem;
+      width: 100%;
+      box-shadow: 3px 3px 0 #111;
     }
-    .card{background:var(--panel);border:1px solid var(--panel-border);border-radius:1rem}
-    .inp{background:rgba(2,6,23,.7);border:1px solid rgba(255,255,255,.10);border-radius:.75rem;padding:.6rem .75rem;width:100%}
-    .btn{border-radius:.75rem;padding:.55rem .9rem;font-weight:700}
-    .muted{color:var(--muted)}
-    .chip{border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:.2rem .6rem;font-size:12px}
-    .thin{scrollbar-width:thin}
+    .btn {
+      border-radius: 14px;
+      padding: 0.55rem 0.9rem;
+      font-weight: 700;
+    }
+    .muted {
+      color: #333;
+    }
+    .chip {
+      border: 2px solid #111;
+      border-radius: 999px;
+      padding: 0.2rem 0.6rem;
+      font-size: 12px;
+      background: #fff8d4;
+      box-shadow: 3px 3px 0 #111;
+    }
+    .thin {
+      scrollbar-width: thin;
+    }
+    .dash-hero {
+      border: 3px solid #111;
+      box-shadow: 6px 6px 0 #111;
+      border-radius: 22px;
+      background: #fffef8;
+    }
 
-    /* Telegram-like chat */
     .chat-shell{
       background:
-        radial-gradient(circle at 12px 12px, rgba(148,163,184,.14) 1px, transparent 1px),
-        radial-gradient(circle at 4px 4px, rgba(148,163,184,.10) 1px, transparent 1px),
-        #eef2f7;
-      background-size: 24px 24px, 12px 12px;
-      border:1px solid #dbe3ee;
-      border-radius:18px;
+        radial-gradient(circle at 9px 9px, rgba(0,0,0,.1) 1px, transparent 1.2px) 0 0 / 20px 20px,
+        #fffef8;
+      border: 2px solid #111;
+      border-radius: 18px;
     }
-    .msg-row{display:flex;gap:10px;margin:12px 0;align-items:flex-end}
-    .msg-row.user{justify-content:flex-end}
-    .msg-row.assistant{justify-content:flex-start}
+    .msg-row { display: flex; gap: 10px; margin: 12px 0; align-items: flex-end; }
+    .msg-row.user { justify-content: flex-end; }
+    .msg-row.assistant { justify-content: flex-start; }
     .msg-avatar{
-      width:28px;height:28px;border-radius:999px;
-      display:flex;align-items:center;justify-content:center;
-      background:#c7d2fe;color:#1e1b4b;font-weight:700;font-size:12px;
-      box-shadow:0 2px 6px rgba(15,23,42,.12);
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fffef8;
+      color: #111;
+      font-weight: 700;
+      font-size: 12px;
+      border: 2px solid #111;
+      box-shadow: 3px 3px 0 #111;
     }
     .msg-bubble{
-      max-width:74%;
-      padding:10px 12px;
-      white-space:pre-wrap;word-break:break-word;
-      box-shadow:0 6px 16px rgba(15,23,42,.08);
-      border:1px solid transparent;
+      max-width: 74%;
+      padding: 10px 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      box-shadow: 3px 3px 0 #111;
+      border: 2px solid #111;
     }
     .msg-row.user .msg-bubble{
-      background:#d7f0ff;border-color:#b6ddff;border-radius:16px 16px 6px 16px;
+      background: #b8e1ff;
+      border-radius: 16px 16px 6px 16px;
     }
     .msg-row.assistant .msg-bubble{
-      background:#ffffff;border-color:#e2e8f0;border-radius:16px 16px 16px 6px;
+      background: #ffd7ad;
+      border-radius: 16px 16px 16px 6px;
     }
-    .msg-name{font-weight:600;font-size:11px;color:#334155;margin-bottom:4px}
-    .msg-meta{margin-top:6px;font-size:10px;color:#64748b;text-align:right}
+    .msg-name { font-weight: 700; font-size: 11px; color: #111; margin-bottom: 4px; }
+    .msg-meta { margin-top: 6px; font-size: 10px; color: #222; text-align: right; }
   </style>
 </head>
 
 <body class="min-h-screen">
   <!-- Top bar -->
-  <header class="sticky top-0 z-10 border-b border-white/10 bg-slate-950/70 backdrop-blur">
-    <div class="max-w-[1500px] w-full mx-auto px-4 py-4 flex items-center justify-between gap-3">
+  <header class="sticky top-0 z-10 py-2">
+    <div class="dash-hero max-w-[1500px] w-full mx-auto px-4 py-4 flex items-center justify-between gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-extrabold text-blue-300">
           SciG Mode Dashboard <span class="chip ml-2 text-emerald-200 bg-emerald-500/10">REALTIME</span>
@@ -203,8 +227,7 @@
         <div>
           <div class="text-sm font-bold">Mode Editor</div>
           <div class="text-xs muted mt-1">
-            Edit title & introduction.
-            (Kalau mau profesional: batasi API edit mode hanya untuk admin.)
+            Edit title & introduction, dan delete mode non-default.
           </div>
         </div>
         <div class="chip bg-amber-500/10 text-amber-200">Editor</div>
@@ -219,7 +242,7 @@
         <div>
           <label class="text-xs muted">Name</label>
           <input id="modeEditName" class="inp text-sm font-mono" placeholder="mode_name" />
-          <div class="text-[11px] muted mt-1">Untuk mode existing, jangan ubah name kalau tidak perlu.</div>
+          <div class="text-[11px] muted mt-1">Mode default dilindungi dari delete.</div>
         </div>
 
         <div>
@@ -235,6 +258,7 @@
         <div class="md:col-span-3 flex gap-2">
           <button class="btn bg-slate-800 hover:bg-slate-700 text-white text-sm" onclick="newModeDraft()">+ Draft Mode Baru</button>
           <button class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-sm" onclick="saveModeEdit()">Save Mode</button>
+          <button id="deleteModeBtn" class="btn bg-red-700 hover:bg-red-600 text-white text-sm" onclick="deleteModeEdit()">Delete Mode</button>
         </div>
 
         <div class="md:col-span-3 text-sm" id="modeEditStatus"></div>
@@ -278,8 +302,25 @@
 
         <div id="messages" class="mt-4 max-h-[640px] overflow-auto pr-1 thin chat-shell p-3"></div>
 
-        <div class="mt-4 border-t border-white/10 pt-4">
-          <div class="text-xs muted">Tampilan ini hanya untuk memantau realtime chat Xiaozhi.</div>
+        <div class="mt-4 border-t border-white/10 pt-4 space-y-3">
+          <div class="flex flex-col gap-2">
+            <label class="text-xs muted">Pesan</label>
+            <textarea id="chatInput" rows="2" class="inp text-sm" placeholder="Ketik pesan di sini..."></textarea>
+          </div>
+
+          <div class="flex items-center gap-3 flex-wrap">
+            <button id="sendBtn" class="btn bg-blue-600 hover:bg-blue-500 text-white text-sm" onclick="sendMessage()">
+              Kirim
+            </button>
+            <button id="micBtn" class="btn bg-amber-600 hover:bg-amber-500 text-white text-sm" onclick="sendVoiceOnce()">
+              Mic: Kirim Suara
+            </button>
+            <label class="flex items-center gap-2 text-xs">
+              <input type="checkbox" id="ttsToggle" class="accent-blue-500" onchange="toggleTts(this.checked)">
+              Putar suara masuk (TTS)
+            </label>
+            <div id="sendHint" class="text-xs muted">Send dikunci: hanya boleh saat mode NORMAL.</div>
+          </div>
         </div>
       </div>
     </section>
@@ -295,6 +336,9 @@
   // ------------------------
   let WS = null;
   let wsTimer = null;
+  let REC = null;
+  let REC_LISTENING = false;
+  let TTS_ON = false;
 
   let CONFIG = null;
   let MODES = [];
@@ -307,6 +351,11 @@
   let THREADS = [];
   let ACTIVE_THREAD_ID = null;
   let ACTIVE_THREAD_MODE = null;
+  let LAST_MESSAGE_ID = 0;
+  let LAST_SPOKEN_ASSISTANT_ID = 0;
+  let MSG_LIVE_TIMER = null;
+  let MSG_LIVE_FETCHING = false;
+  const MSG_LIVE_POLL_MS = 1200;
 
   let SUPPRESS_MODE_CHANGE = false;
 
@@ -314,6 +363,12 @@
   // Helpers
   // ------------------------
   const $ = (id) => document.getElementById(id);
+
+  function isNearBottom(el, threshold = 140) {
+    if (!el) return true;
+    const delta = el.scrollHeight - el.scrollTop - el.clientHeight;
+    return delta <= threshold;
+  }
 
   async function api(url, opts = {}) {
     const o = Object.assign({
@@ -350,6 +405,20 @@
   function needsLang(modeName) {
     return modeName === "f2f_auto" || modeName === "translation_text";
   }
+
+  const PROTECTED_MODE_NAMES = new Set([
+    "f2f_auto",
+    "translation_text",
+    "normal",
+    "santai",
+    "anak_anak",
+    "coding_expert",
+    "sains",
+    "sejarah",
+    "matematika_dasar",
+    "curhat",
+    "psikolog"
+  ]);
 
   function toast(msg, ok=true) {
     const box = $("toastBox");
@@ -407,9 +476,9 @@
           return;
         }
         if (msg.thread_id === ACTIVE_THREAD_ID) {
-          loadMessages({ replace: true, keepBottom: true });
+          loadMessages({ incremental: true, keepBottom: true }).catch(() => {});
         }
-        loadThreads();
+        loadThreads().catch(() => {});
       }
     }
 
@@ -439,9 +508,97 @@
   }
 
   // ------------------------
+  // Speech (STT + TTS)
+  // ------------------------
+  function getRecognizer() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+    return SR ? new SR() : null;
+  }
+
+  function sendVoiceOnce() {
+    const modeName = (ACTIVE_MODE?.name || "");
+    const allowed = ["normal", "f2f_auto", "translation_text"].includes(modeName);
+    if (!allowed) {
+      toast("Mode ini tidak mengizinkan kirim pesan.", false);
+      return;
+    }
+    const rec = getRecognizer();
+    if (!rec) {
+      toast("Browser tidak mendukung SpeechRecognition. Gunakan Chrome berbasis Chromium.", false);
+      return;
+    }
+    if (REC_LISTENING && REC) {
+      try { REC.stop(); } catch(e){}
+    }
+    REC = rec;
+    REC.lang = "id-ID";
+    REC.continuous = false;
+    REC.interimResults = false;
+    REC.onstart = () => {
+      REC_LISTENING = true;
+      toast("Mendengarkan... ucapkan pesan", true);
+    };
+    REC.onerror = (e) => {
+      REC_LISTENING = false;
+      toast("Mic error: " + (e.error || "unknown"), false);
+    };
+    REC.onend = () => {
+      REC_LISTENING = false;
+    };
+    REC.onresult = async (ev) => {
+      const txt = (ev.results?.[0]?.[0]?.transcript || "").trim();
+      if (txt) {
+        await sendMessage(txt);
+      } else {
+        toast("Tidak ada suara terdeteksi.", false);
+      }
+    };
+    REC.start();
+  }
+
+  function toggleTts(on) {
+    TTS_ON = !!on;
+    if (!('speechSynthesis' in window)) {
+      toast("Browser tidak mendukung Speech Synthesis.", false);
+      TTS_ON = false;
+      $("ttsToggle").checked = false;
+    }
+  }
+
+  function speak(text) {
+    if (!TTS_ON) return;
+    if (!text) return;
+    if (!("speechSynthesis" in window)) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "id-ID";
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    } catch(e) {}
+  }
+
+  function stopMessagesRealtime() {
+    if (MSG_LIVE_TIMER) {
+      clearInterval(MSG_LIVE_TIMER);
+      MSG_LIVE_TIMER = null;
+    }
+  }
+
+  function startMessagesRealtime() {
+    stopMessagesRealtime();
+    MSG_LIVE_TIMER = setInterval(() => {
+      if (!ACTIVE_THREAD_ID) return;
+      if (document.hidden) return;
+      if (MSG_LIVE_FETCHING) return;
+      loadMessages({ incremental: true, keepBottom: true }).catch(() => {});
+    }, MSG_LIVE_POLL_MS);
+  }
+
+  // ------------------------
   // Boot
   // ------------------------
   async function boot() {
+    stopMessagesRealtime();
     connectWS();
     await loadConfig();
     fillPsids();
@@ -454,6 +611,7 @@
     await loadMyCodes();
     await loadThreads();
     await previewPrompt();
+    startMessagesRealtime();
   }
 
   async function refreshAll() {
@@ -464,6 +622,7 @@
     await loadMyCodes();
     await loadThreads();
     await previewPrompt();
+    startMessagesRealtime();
   }
 
   async function loadConfig() {
@@ -537,17 +696,21 @@
     });
 
     const ed = $("modeEditSelect");
-    ed.innerHTML = "";
-    MODES.forEach(m => {
-      const opt = document.createElement("option");
-      opt.value = m.id;
-      opt.textContent = `${m.name}`;
-      ed.appendChild(opt);
-    });
+    if (ed) {
+      const current = ed.value;
+      ed.innerHTML = "";
+      MODES.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m.id;
+        opt.textContent = `${m.name}`;
+        ed.appendChild(opt);
+      });
 
-    if (MODES.length) {
-      ed.value = String(MODES[0].id);
-      pickModeToEdit();
+      if (MODES.length) {
+        const stillExists = MODES.some(m => String(m.id) === String(current));
+        ed.value = stillExists ? String(current) : String(MODES[0].id);
+        pickModeToEdit();
+      }
     }
   }
 
@@ -572,16 +735,27 @@
   }
 
   function updateSendState() {
-    const isNormal = (ACTIVE_MODE?.name || "") === "normal";
+    const modeName = (ACTIVE_MODE?.name || "");
+    const allowed = ["normal", "f2f_auto", "translation_text"].includes(modeName);
     const btn = $("sendBtn");
+    const micBtn = $("micBtn");
     const hint = $("sendHint");
     if (btn) {
-      btn.disabled = !isNormal;
-      btn.classList.toggle("opacity-50", !isNormal);
-      btn.classList.toggle("cursor-not-allowed", !isNormal);
+      btn.disabled = !allowed;
+      btn.classList.toggle("opacity-50", !allowed);
+      btn.classList.toggle("cursor-not-allowed", !allowed);
+    }
+    if (micBtn) {
+      micBtn.disabled = !allowed;
+      micBtn.classList.toggle("opacity-50", !allowed);
+      micBtn.classList.toggle("cursor-not-allowed", !allowed);
     }
     if (hint) {
-      hint.textContent = isNormal ? "OK, mode NORMAL. Pesan akan diproses LLM provider." : "Send dikunci: hanya boleh saat mode NORMAL.";
+      if (!allowed) {
+        hint.textContent = "Send dikunci: hanya boleh saat mode Normal / F2F / Terjemahan.";
+      } else {
+        hint.textContent = "Siap kirim pesan.";
+      }
     }
   }
 
@@ -589,8 +763,11 @@
     CURRENT_PSID = $("psidSelect").value;
     localStorage.setItem("scig_psid", CURRENT_PSID);
 
+    stopMessagesRealtime();
     ACTIVE_THREAD_ID = null;
     ACTIVE_THREAD_MODE = null;
+    LAST_MESSAGE_ID = 0;
+    LAST_SPOKEN_ASSISTANT_ID = 0;
     $("activeThread").textContent = "-";
     $("threadModeBadge").textContent = "Thread Mode: -";
     $("chatPsidBadge").textContent = `PSID: ${CURRENT_PSID}`;
@@ -600,6 +777,7 @@
     await loadDeviceSettings();
     await loadThreads();
     await previewPrompt();
+    startMessagesRealtime();
   }
 
   async function applyMode() {
@@ -677,14 +855,30 @@
   // Mode Editor
   // ------------------------
   function pickModeToEdit() {
-    const id = parseInt($("modeEditSelect").value, 10);
+    const ed = $("modeEditSelect");
+    if (!ed || !MODES.length) return;
+
+    const id = parseInt(ed.value, 10);
     const m = MODES.find(x => x.id === id);
     if (!m) return;
 
     $("modeEditName").value = m.name || "";
     $("modeEditTitle").value = m.title || "";
     $("modeEditIntro").value = m.introduction || "";
-    $("modeEditStatus").innerHTML = `<span class="text-xs muted">Editing: <span class="font-mono">${escapeHtml(m.name)}</span></span>`;
+
+    const isProtected = PROTECTED_MODE_NAMES.has(m.name || "");
+    const delBtn = $("deleteModeBtn");
+    if (delBtn) {
+      delBtn.disabled = isProtected;
+      delBtn.classList.toggle("opacity-50", isProtected);
+      delBtn.classList.toggle("cursor-not-allowed", isProtected);
+      delBtn.title = isProtected ? "Mode default tidak bisa dihapus" : "Hapus mode ini";
+    }
+
+    const note = isProtected
+      ? "Mode default (dilindungi, tidak bisa dihapus)."
+      : "Mode custom/non-default bisa dihapus.";
+    $("modeEditStatus").innerHTML = `<span class="text-xs muted">Editing: <span class="font-mono">${escapeHtml(m.name)}</span> - ${escapeHtml(note)}</span>`;
   }
 
   function newModeDraft() {
@@ -692,6 +886,12 @@
     $("modeEditTitle").value = "Custom Mode";
     $("modeEditIntro").value = "PERAN: ...\nGAYA: ...\nATURAN:\n- ...";
     $("modeEditStatus").innerHTML = `<span class="text-xs muted">Draft mode baru siap. Tinggal Save.</span>`;
+    const delBtn = $("deleteModeBtn");
+    if (delBtn) {
+      delBtn.disabled = true;
+      delBtn.classList.add("opacity-50", "cursor-not-allowed");
+      delBtn.title = "Simpan dulu mode baru sebelum bisa dihapus";
+    }
   }
 
   async function saveModeEdit() {
@@ -717,6 +917,34 @@
     }
   }
 
+  async function deleteModeEdit() {
+    const id = parseInt(($("modeEditSelect")?.value || "0"), 10);
+    const m = MODES.find(x => x.id === id);
+    if (!m) {
+      toast("Mode tidak ditemukan.", false);
+      return;
+    }
+    if (PROTECTED_MODE_NAMES.has(m.name || "")) {
+      toast("Mode default tidak boleh dihapus.", false);
+      return;
+    }
+
+    const ok = window.confirm(`Hapus mode '${m.name}'?`);
+    if (!ok) return;
+
+    try {
+      await api(`/api/modes/${encodeURIComponent(String(id))}`, {method:"DELETE"});
+      $("modeEditStatus").innerHTML = `<span class="text-emerald-200 text-sm">OK Mode dihapus</span>`;
+      toast("OK Mode dihapus", true);
+      await loadModes();
+      await loadActiveMode();
+      await previewPrompt();
+    } catch(e) {
+      $("modeEditStatus").innerHTML = `<span class="text-red-200 text-sm">ERR ${escapeHtml(e.message)}</span>`;
+      toast("ERR " + escapeHtml(e.message), false);
+    }
+  }
+
   // ------------------------
   // Threads & Messages
   // ------------------------
@@ -727,7 +955,14 @@
     wrap.innerHTML = "";
 
     if (THREADS.length === 0) {
+      ACTIVE_THREAD_ID = null;
+      ACTIVE_THREAD_MODE = null;
+      LAST_MESSAGE_ID = 0;
+      LAST_SPOKEN_ASSISTANT_ID = 0;
       wrap.innerHTML = `<div class="text-xs muted">Belum ada thread.</div>`;
+      if ($("messages")) $("messages").innerHTML = `<div class="text-xs muted">Belum ada pesan.</div>`;
+      if ($("activeThread")) $("activeThread").textContent = "-";
+      if ($("threadModeBadge")) $("threadModeBadge").textContent = "Thread Mode: -";
       return;
     }
 
@@ -773,6 +1008,8 @@
 
   async function selectThread(id) {
     ACTIVE_THREAD_ID = id;
+    LAST_MESSAGE_ID = 0;
+    LAST_SPOKEN_ASSISTANT_ID = 0;
     $("activeThread").textContent = String(id);
     ACTIVE_THREAD_MODE = null;
     const t = THREADS.find(x => x.id === id);
@@ -782,7 +1019,8 @@
     $("threadModeBadge").textContent = `Thread Mode: ${ACTIVE_THREAD_MODE || "-"}`;
 
     await loadThreads();
-    await loadMessages({ replace: true, keepBottom: true });
+    await loadMessages({ replace: true, keepBottom: true, resetCursor: true });
+    startMessagesRealtime();
   }
 
   function renderOneMessage(m) {
@@ -815,26 +1053,113 @@
     return row;
   }
 
-  async function loadMessages({ replace=false, keepBottom=false } = {}) {
+  async function loadMessages({ replace=false, keepBottom=false, incremental=false, resetCursor=false } = {}) {
     if (!ACTIVE_THREAD_ID) return;
 
     const wrap = $("messages");
-    const msgs = await api(`/api/chats/${ACTIVE_THREAD_ID}/messages?device_id=${encodeURIComponent(CURRENT_PSID)}&limit=10000`);
-    const filtered = (msgs || []).filter(m => m.role === "user" || m.role === "assistant");
+    const stickBottom = keepBottom || isNearBottom(wrap);
+    if (resetCursor) LAST_MESSAGE_ID = 0;
 
-    if (replace) wrap.innerHTML = "";
+    const useIncremental = Boolean(incremental && !replace && LAST_MESSAGE_ID > 0);
+    if (useIncremental && MSG_LIVE_FETCHING) return;
+    if (useIncremental) MSG_LIVE_FETCHING = true;
 
-    if (!msgs || msgs.length === 0) {
-      if (replace) wrap.innerHTML = `<div class="text-xs muted">Belum ada pesan.</div>`;
-      return;
+    try {
+      let url = `/api/chats/${ACTIVE_THREAD_ID}/messages?device_id=${encodeURIComponent(CURRENT_PSID)}&limit=${useIncremental ? 300 : 10000}`;
+      if (useIncremental) {
+        url += `&after_id=${encodeURIComponent(String(LAST_MESSAGE_ID))}`;
+      }
+
+      const msgs = await api(url);
+      const filtered = (msgs || []).filter(m => m.role === "user" || m.role === "assistant");
+
+      if (!msgs || msgs.length === 0) {
+        if (replace) wrap.innerHTML = `<div class="text-xs muted">Belum ada pesan.</div>`;
+        return;
+      }
+
+      if (useIncremental) {
+        const onlyPlaceholder =
+          wrap.childElementCount === 1 &&
+          String(wrap.firstElementChild?.textContent || "").toLowerCase().includes("belum ada pesan");
+        if (onlyPlaceholder) wrap.innerHTML = "";
+
+        const frag = document.createDocumentFragment();
+        filtered.forEach(m => frag.appendChild(renderOneMessage(m)));
+        wrap.appendChild(frag);
+      } else {
+        // Full render to avoid duplicated rows and keep UI consistent.
+        wrap.innerHTML = "";
+        const frag = document.createDocumentFragment();
+        filtered.forEach(m => frag.appendChild(renderOneMessage(m)));
+        wrap.appendChild(frag);
+      }
+
+      if (filtered.length === 0) {
+        if (!useIncremental) {
+          wrap.innerHTML = `<div class="text-xs muted">Belum ada pesan user/assistant.</div>`;
+        }
+        return;
+      }
+
+      const newestId = Number(filtered[filtered.length - 1]?.id || 0);
+      if (newestId > LAST_MESSAGE_ID) LAST_MESSAGE_ID = newestId;
+
+      if (stickBottom) wrap.scrollTop = wrap.scrollHeight;
+
+      // TTS untuk pesan assistant terbaru, jangan ulang untuk id yang sama.
+      if (TTS_ON) {
+        for (let i = filtered.length - 1; i >= 0; i -= 1) {
+          const m = filtered[i];
+          if (m.role !== "assistant") continue;
+          const mid = Number(m.id || 0);
+          if (mid > LAST_SPOKEN_ASSISTANT_ID) {
+            LAST_SPOKEN_ASSISTANT_ID = mid;
+            speak(m.content || "");
+          }
+          break;
+        }
+      }
+    } finally {
+      if (useIncremental) MSG_LIVE_FETCHING = false;
     }
-    const frag = document.createDocumentFragment();
-    filtered.forEach(m => frag.appendChild(renderOneMessage(m)));
-    wrap.appendChild(frag);
-    if (keepBottom) wrap.scrollTop = wrap.scrollHeight;
+  }
 
-    if (filtered.length === 0 && replace) {
-      wrap.innerHTML = `<div class="text-xs muted">Belum ada pesan user/assistant.</div>`;
+  async function ensureThread() {
+    if (ACTIVE_THREAD_ID) return ACTIVE_THREAD_ID;
+    await newChat();
+    return ACTIVE_THREAD_ID;
+  }
+
+  async function sendMessage(textOverride=null) {
+    try {
+      const modeName = (ACTIVE_MODE?.name || "");
+      const allowed = ["normal", "f2f_auto", "translation_text"].includes(modeName);
+      if (!allowed) {
+        toast("Mode ini tidak mengizinkan kirim pesan.", false);
+        return;
+      }
+
+      const text = ((textOverride ?? $("chatInput")?.value) || "").trim();
+      if (!text) {
+        toast("Isi pesan dulu.", false);
+        return;
+      }
+
+      const threadId = await ensureThread();
+      const body = {
+        device_id: CURRENT_PSID,
+        thread_id: threadId,
+        message: text,
+        vars: {}
+      };
+
+      await api("/api/chats/send", {method:"POST", body: JSON.stringify(body)});
+      if (!textOverride && $("chatInput")) $("chatInput").value = "";
+      await loadMessages({ replace: true, keepBottom: true });
+      toast("Pesan terkirim.", true);
+    } catch(e) {
+      toast(`ERR ${escapeHtml(e.message)}`, false);
     }
   }
 
@@ -855,6 +1180,7 @@
           SUPPRESS_MODE_CHANGE = false;
         }
         await applyMode();
+        updateSendState();
       });
     }
 
@@ -862,6 +1188,18 @@
       console.error(err);
       toast("ERR Gagal boot dashboard: " + escapeHtml(err.message), false);
     });
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && ACTIVE_THREAD_ID) {
+        loadMessages({ incremental: true, keepBottom: true }).catch(() => {});
+      }
+    });
+  });
+
+  window.addEventListener("beforeunload", () => {
+    stopMessagesRealtime();
+    if (wsTimer) clearInterval(wsTimer);
+    try { if (WS) WS.close(); } catch (e) {}
   });
 </script>
 

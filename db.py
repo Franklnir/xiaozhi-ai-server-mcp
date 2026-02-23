@@ -64,6 +64,7 @@ CODE_REGEX = re.compile(r"^[A-Za-z0-9]{10}$")
 # Lightweight in-process metrics (per worker)
 _METRICS_LOCK = threading.Lock()
 _METRICS_HTTP_TS = deque()
+_METRICS_HTTP_ERR_TS = deque()
 _METRICS_MSG_TS = deque()
 _METRICS_START = time.time()
 _METRICS_HTTP_TOTAL = 0
@@ -83,8 +84,10 @@ def _metrics_add_http(status_code: int) -> None:
         _METRICS_HTTP_TOTAL += 1
         if int(status_code) >= 400:
             _METRICS_HTTP_ERR += 1
+            _METRICS_HTTP_ERR_TS.append(now)
         _METRICS_HTTP_TS.append(now)
         _metrics_trim(_METRICS_HTTP_TS, now, 300)
+        _metrics_trim(_METRICS_HTTP_ERR_TS, now, 300)
 
 
 def _metrics_add_message() -> None:
@@ -100,8 +103,10 @@ def _metrics_snapshot() -> Dict[str, Any]:
     now = time.time()
     with _METRICS_LOCK:
         _metrics_trim(_METRICS_HTTP_TS, now, 300)
+        _metrics_trim(_METRICS_HTTP_ERR_TS, now, 300)
         _metrics_trim(_METRICS_MSG_TS, now, 300)
         http_1m = sum(1 for t in _METRICS_HTTP_TS if now - t <= 60)
+        http_err_1m = sum(1 for t in _METRICS_HTTP_ERR_TS if now - t <= 60)
         msg_1m = sum(1 for t in _METRICS_MSG_TS if now - t <= 60)
         snap = {
             "uptime_sec": int(now - _METRICS_START),
@@ -109,6 +114,8 @@ def _metrics_snapshot() -> Dict[str, Any]:
             "http_errors": int(_METRICS_HTTP_ERR),
             "http_last_1m": int(http_1m),
             "http_last_5m": int(len(_METRICS_HTTP_TS)),
+            "http_errors_last_1m": int(http_err_1m),
+            "http_errors_last_5m": int(len(_METRICS_HTTP_ERR_TS)),
             "msg_total": int(_METRICS_MSG_TOTAL),
             "msg_last_1m": int(msg_1m),
             "msg_last_5m": int(len(_METRICS_MSG_TS)),
@@ -239,7 +246,8 @@ class Settings(BaseSettings):
 
     # Supervisor scan interval (DB -> auto connect)
     mcp_scan_interval_sec: int = Field(default=8, validation_alias=AliasChoices("MCP_SCAN_INTERVAL_SEC"))
-    mcp_supervisor_enabled: bool = Field(default=True, validation_alias=AliasChoices("MCP_SUPERVISOR_ENABLED"))
+    # Allow disabling via legacy env name SCIG_MCP_ENABLED for convenience
+    mcp_supervisor_enabled: bool = Field(default=True, validation_alias=AliasChoices("MCP_SUPERVISOR_ENABLED", "SCIG_MCP_ENABLED"))
 
     # Logging
     log_level: str = Field(default="INFO", validation_alias=AliasChoices("LOG_LEVEL"))
@@ -292,6 +300,12 @@ class Settings(BaseSettings):
     cleanup_enabled: bool = Field(default=True, validation_alias=AliasChoices("CLEANUP_ENABLED"))
     cleanup_days: int = Field(default=30, validation_alias=AliasChoices("CLEANUP_DAYS"))
     cleanup_interval_minutes: int = Field(default=360, validation_alias=AliasChoices("CLEANUP_INTERVAL_MINUTES"))
+
+    # Monitoring alerts
+    monitor_mem_alert_mb: int = Field(default=600, validation_alias=AliasChoices("MONITOR_MEM_ALERT_MB"))
+    monitor_http_error_rate_alert_pct: int = Field(default=20, validation_alias=AliasChoices("MONITOR_HTTP_ERROR_RATE_ALERT_PCT"))
+    monitor_mcp_workers_min: int = Field(default=1, validation_alias=AliasChoices("MONITOR_MCP_WORKERS_MIN"))
+    monitor_mcp_disconnected_alert_pct: int = Field(default=50, validation_alias=AliasChoices("MONITOR_MCP_DISCONNECTED_ALERT_PCT"))
 
 
 @lru_cache
@@ -747,6 +761,7 @@ DEFAULT_MODES = [
         ),
     },
 ]
+DEFAULT_MODE_NAME_SET = {m["name"] for m in DEFAULT_MODES}
 
 DDL_SCRIPT = """
 CREATE TABLE IF NOT EXISTS users (
@@ -927,8 +942,53 @@ def init_db(engine: Engine) -> None:
                     {"n": m["name"], "t": m["title"], "i": m["introduction"]},
                 )
 
-        active = conn.execute(text("SELECT COUNT(*) FROM active_mode WHERE id=1")).scalar() or 0
         normal_id = conn.execute(text("SELECT id FROM modes WHERE name='normal' LIMIT 1")).scalar()
+        allowed_mode_names = [m["name"] for m in DEFAULT_MODES]
+        allowed_params = {f"mode_name_{i}": n for i, n in enumerate(allowed_mode_names)}
+        allowed_sql = ", ".join(f":mode_name_{i}" for i in range(len(allowed_mode_names)))
+        disallowed_rows = conn.execute(
+            text(f"SELECT id FROM modes WHERE name NOT IN ({allowed_sql})"),
+            allowed_params,
+        ).mappings().all()
+
+        disallowed_ids = [int(r["id"]) for r in disallowed_rows if r.get("id") is not None]
+        if disallowed_ids:
+            id_params = {f"mid_{i}": v for i, v in enumerate(disallowed_ids)}
+            id_sql = ", ".join(f":mid_{i}" for i in range(len(disallowed_ids)))
+
+            if normal_id:
+                conn.execute(
+                    text(f"UPDATE active_mode SET mode_id=:normal_id WHERE mode_id IN ({id_sql})"),
+                    {"normal_id": int(normal_id), **id_params},
+                )
+                conn.execute(
+                    text(f"UPDATE device_active_mode SET mode_id=:normal_id WHERE mode_id IN ({id_sql})"),
+                    {"normal_id": int(normal_id), **id_params},
+                )
+                conn.execute(
+                    text(f"UPDATE chat_threads SET mode_id=:normal_id WHERE mode_id IN ({id_sql})"),
+                    {"normal_id": int(normal_id), **id_params},
+                )
+            else:
+                conn.execute(
+                    text(f"DELETE FROM active_mode WHERE mode_id IN ({id_sql})"),
+                    id_params,
+                )
+                conn.execute(
+                    text(f"DELETE FROM device_active_mode WHERE mode_id IN ({id_sql})"),
+                    id_params,
+                )
+                conn.execute(
+                    text(f"UPDATE chat_threads SET mode_id=NULL WHERE mode_id IN ({id_sql})"),
+                    id_params,
+                )
+
+            conn.execute(
+                text(f"DELETE FROM modes WHERE id IN ({id_sql})"),
+                id_params,
+            )
+
+        active = conn.execute(text("SELECT COUNT(*) FROM active_mode WHERE id=1")).scalar() or 0
         if active == 0 and normal_id:
             conn.execute(text("INSERT INTO active_mode (id, mode_id) VALUES (1,:mid)"), {"mid": int(normal_id)})
 
@@ -1651,6 +1711,29 @@ def db_get_messages_page_admin(
     return [dict(r) for r in rows]
 
 
+def db_resolve_partner_device_by_code(engine: Engine, code: str) -> Dict[str, Any]:
+    """
+    Given a 10-char auth code, return the claimed user's latest device_id (fallback to DEFAULT_BUCKET).
+    Raises ValueError if code invalid or not claimed.
+    """
+    code_norm = (code or "").strip()
+    if not CODE_REGEX.fullmatch(code_norm):
+        raise ValueError("Kode harus 10 karakter alfanumerik")
+
+    with engine.begin() as conn:
+        row = conn.execute(
+            text("SELECT used_by FROM auth_codes WHERE code=:c LIMIT 1"),
+            {"c": code_norm},
+        ).mappings().fetchone()
+        if not row or row.get("used_by") is None:
+            raise ValueError("Kode belum di-claim")
+        partner_user_id = int(row["used_by"])
+
+    devices = db_list_user_devices(engine, partner_user_id) or []
+    partner_device_id = devices[0] if devices else DEFAULT_BUCKET
+    return {"user_id": partner_user_id, "device_id": canonical_device_bucket(partner_device_id)}
+
+
 # ---------- routing physical device -> PSID ----------
 
 def db_get_route_psid(engine: Engine, physical_device_id: str) -> Optional[str]:
@@ -1704,6 +1787,40 @@ def resolve_psid_for_incoming(engine: Engine, incoming_physical_device_id: str) 
 
 # ---------- modes ----------
 
+def _db_get_normal_mode_row(conn) -> Optional[Dict[str, Any]]:
+    row = conn.execute(
+        text("SELECT id, name, title, introduction FROM modes WHERE name='normal' LIMIT 1")
+    ).mappings().fetchone()
+    return dict(row) if row else None
+
+
+def _db_should_force_normal_mode(conn) -> bool:
+    """
+    Force fallback to normal when MCP is effectively down:
+    - there are claimed auth codes (used_by is set), and
+    - none of the MCP connections is currently connected.
+    """
+    claimed_total = int(
+        conn.execute(text("SELECT COUNT(*) FROM auth_codes WHERE used_by IS NOT NULL")).scalar() or 0
+    )
+    if claimed_total <= 0:
+        return False
+    any_connected = conn.execute(
+        text("SELECT 1 FROM mcp_conn_status WHERE is_connected=1 LIMIT 1")
+    ).scalar()
+    return not bool(any_connected)
+
+
+def _db_apply_normal_fallback_if_needed(conn, mode_row: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    if mode_row is None:
+        mode_row = {"id": 0, "name": "error", "title": "Error", "introduction": "No active mode set."}
+    if _db_should_force_normal_mode(conn):
+        normal = _db_get_normal_mode_row(conn)
+        if normal:
+            return normal
+    return mode_row
+
+
 def db_get_active_mode(engine: Engine) -> Dict[str, Any]:
     with engine.begin() as conn:
         row = conn.execute(
@@ -1712,9 +1829,7 @@ def db_get_active_mode(engine: Engine) -> Dict[str, Any]:
                 "FROM active_mode a JOIN modes m ON a.mode_id = m.id WHERE a.id=1"
             )
         ).mappings().fetchone()
-        if not row:
-            return {"id": 0, "name": "error", "title": "Error", "introduction": "No active mode set."}
-        return dict(row)
+        return _db_apply_normal_fallback_if_needed(conn, dict(row) if row else None)
 
 
 def db_get_active_mode_for_device(engine: Engine, device_id: str) -> Dict[str, Any]:
@@ -1728,9 +1843,14 @@ def db_get_active_mode_for_device(engine: Engine, device_id: str) -> Dict[str, A
             ),
             {"d": did},
         ).mappings().fetchone()
-        if row:
-            return dict(row)
-    return db_get_active_mode(engine)
+        if not row:
+            row = conn.execute(
+                text(
+                    "SELECT m.id, m.name, m.title, m.introduction "
+                    "FROM active_mode a JOIN modes m ON a.mode_id = m.id WHERE a.id=1"
+                )
+            ).mappings().fetchone()
+        return _db_apply_normal_fallback_if_needed(conn, dict(row) if row else None)
 
 
 def db_set_active_mode_for_device(engine: Engine, device_id: str, *, mode_id: Optional[int] = None, name: Optional[str] = None) -> Dict[str, Any]:
@@ -1755,7 +1875,7 @@ def db_set_active_mode_for_device(engine: Engine, device_id: str, *, mode_id: Op
 def db_get_mode_by_id(engine: Engine, mode_id: int) -> Optional[Dict[str, Any]]:
     with engine.begin() as conn:
         row = conn.execute(
-            text("SELECT id, name, title, introduction FROM modes WHERE id=:id"),
+            text("SELECT id, name, title, introduction FROM modes WHERE id=:id AND name<>'walkie_talkie'"),
             {"id": int(mode_id)},
         ).mappings().fetchone()
         return dict(row) if row else None
@@ -1763,25 +1883,185 @@ def db_get_mode_by_id(engine: Engine, mode_id: int) -> Optional[Dict[str, Any]]:
 
 def db_list_modes(engine: Engine) -> List[Dict[str, Any]]:
     with engine.begin() as conn:
-        rows = conn.execute(text("SELECT id, name, title, introduction FROM modes ORDER BY id ASC")).mappings().all()
+        rows = conn.execute(
+            text("SELECT id, name, title, introduction FROM modes WHERE name<>'walkie_talkie' ORDER BY id ASC")
+        ).mappings().all()
         return [dict(r) for r in rows]
 
 
 def db_upsert_mode(engine: Engine, name: str, title: str, introduction: str) -> Dict[str, Any]:
-    name = normalize_device_id(name)
+    mode_name = normalize_device_id(name)
+    if not mode_name:
+        raise ValueError("Mode name wajib diisi.")
+    if not (title or "").strip():
+        raise ValueError("Mode title wajib diisi.")
+    if not (introduction or "").strip():
+        raise ValueError("Mode introduction wajib diisi.")
+
     with engine.begin() as conn:
-        exists = conn.execute(text("SELECT id FROM modes WHERE name=:n"), {"n": name}).scalar()
-        if exists:
+        exists_id = conn.execute(
+            text("SELECT id FROM modes WHERE name=:n LIMIT 1"),
+            {"n": mode_name},
+        ).scalar()
+        if exists_id:
             conn.execute(
                 text("UPDATE modes SET title=:t, introduction=:i WHERE id=:id"),
-                {"t": title, "i": introduction, "id": int(exists)},
+                {"t": title, "i": introduction, "id": int(exists_id)},
+            )
+            return {"status": "updated", "id": int(exists_id), "name": mode_name}
+
+        conn.execute(
+            text("INSERT INTO modes (name, title, introduction) VALUES (:n, :t, :i)"),
+            {"n": mode_name, "t": title, "i": introduction},
+        )
+        new_id = conn.execute(
+            text("SELECT id FROM modes WHERE name=:n LIMIT 1"),
+            {"n": mode_name},
+        ).scalar()
+        return {"status": "created", "id": int(new_id), "name": mode_name}
+
+
+def db_delete_mode(
+    engine: Engine,
+    *,
+    mode_id: Optional[int] = None,
+    mode_name: Optional[str] = None,
+) -> Dict[str, Any]:
+    if mode_id is None and not (mode_name or "").strip():
+        raise ValueError("Pilih mode_id atau mode_name untuk delete.")
+
+    with engine.begin() as conn:
+        row = None
+        if mode_id is not None:
+            row = conn.execute(
+                text("SELECT id, name FROM modes WHERE id=:id LIMIT 1"),
+                {"id": int(mode_id)},
+            ).mappings().fetchone()
+        else:
+            row = conn.execute(
+                text("SELECT id, name FROM modes WHERE name=:n LIMIT 1"),
+                {"n": normalize_device_id(mode_name or "")},
+            ).mappings().fetchone()
+
+        if not row:
+            raise ValueError("Mode tidak ditemukan.")
+
+        target_id = int(row["id"])
+        target_name = str(row["name"] or "")
+
+        if target_name in DEFAULT_MODE_NAME_SET:
+            raise ValueError(f"Mode default '{target_name}' tidak boleh dihapus.")
+
+        normal_id = conn.execute(text("SELECT id FROM modes WHERE name='normal' LIMIT 1")).scalar()
+        if normal_id:
+            conn.execute(
+                text("UPDATE active_mode SET mode_id=:normal_id WHERE mode_id=:target_id"),
+                {"normal_id": int(normal_id), "target_id": target_id},
+            )
+            conn.execute(
+                text("UPDATE device_active_mode SET mode_id=:normal_id WHERE mode_id=:target_id"),
+                {"normal_id": int(normal_id), "target_id": target_id},
+            )
+            conn.execute(
+                text("UPDATE chat_threads SET mode_id=:normal_id WHERE mode_id=:target_id"),
+                {"normal_id": int(normal_id), "target_id": target_id},
             )
         else:
+            conn.execute(text("DELETE FROM active_mode WHERE mode_id=:target_id"), {"target_id": target_id})
+            conn.execute(text("DELETE FROM device_active_mode WHERE mode_id=:target_id"), {"target_id": target_id})
+            conn.execute(text("UPDATE chat_threads SET mode_id=NULL WHERE mode_id=:target_id"), {"target_id": target_id})
+
+        conn.execute(text("DELETE FROM modes WHERE id=:id"), {"id": target_id})
+        return {"status": "deleted", "id": target_id, "name": target_name}
+
+
+def db_list_admin_audit_logs_page(
+    engine: Engine,
+    *,
+    page: int = 1,
+    page_size: int = 50,
+    admin_username: str = "",
+    action: str = "",
+    date_from: str = "",
+    date_to: str = "",
+) -> Dict[str, Any]:
+    p = max(1, int(page or 1))
+    ps = max(10, min(int(page_size or 50), 200))
+
+    where_parts: List[str] = []
+    params: Dict[str, Any] = {}
+
+    admin_username = (admin_username or "").strip()
+    action = (action or "").strip()
+    date_from = (date_from or "").strip()
+    date_to = (date_to or "").strip()
+
+    if admin_username:
+        where_parts.append("admin_username LIKE :admin_username")
+        params["admin_username"] = f"%{admin_username}%"
+
+    if action:
+        where_parts.append("action LIKE :action")
+        params["action"] = f"%{action}%"
+
+    try:
+        if date_from:
+            datetime.strptime(date_from, "%Y-%m-%d")
+            where_parts.append("created_at >= :date_from")
+            params["date_from"] = f"{date_from} 00:00:00"
+    except Exception:
+        date_from = ""
+
+    try:
+        if date_to:
+            datetime.strptime(date_to, "%Y-%m-%d")
+            where_parts.append("created_at <= :date_to")
+            params["date_to"] = f"{date_to} 23:59:59"
+    except Exception:
+        date_to = ""
+
+    where_sql = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+
+    with engine.begin() as conn:
+        total = int(
             conn.execute(
-                text("INSERT INTO modes (name, title, introduction) VALUES (:n, :t, :i)"),
-                {"n": name, "t": title, "i": introduction},
-            )
-    return {"status": "success", "name": name}
+                text(f"SELECT COUNT(*) FROM admin_audit_logs {where_sql}"),
+                params,
+            ).scalar()
+            or 0
+        )
+
+        total_pages = max(1, (total + ps - 1) // ps)
+        p = min(p, total_pages)
+        offset = (p - 1) * ps
+
+        rows = conn.execute(
+            text(
+                f"""
+                SELECT id, admin_user_id, admin_username, action, target_type, target_id,
+                       ip, user_agent, details, created_at
+                FROM admin_audit_logs
+                {where_sql}
+                ORDER BY id DESC
+                LIMIT :lim OFFSET :off
+                """
+            ),
+            {**params, "lim": ps, "off": offset},
+        ).mappings().all()
+
+    return {
+        "logs": [dict(r) for r in rows],
+        "page": int(p),
+        "page_size": int(ps),
+        "total": int(total),
+        "total_pages": int(total_pages),
+        "filters": {
+            "admin_username": admin_username,
+            "action": action,
+            "date_from": date_from,
+            "date_to": date_to,
+        },
+    }
 
 
 class SafeDict(dict):
@@ -1796,26 +2076,54 @@ def safe_format(template: str, vars_dict: Dict[str, Any]) -> str:
         return template
 
 
+XIAOZHI_STRICT_RULES = (
+    "1) Setiap pesan user WAJIB diawali get_prompt sebelum respons apa pun.\n"
+    "2) Argumen minimal get_prompt: {\"device_id\":\"<device_fisik>\"}.\n"
+    "3) Gunakan hanya result.content[0].text sebagai system prompt aktif untuk giliran tersebut.\n"
+    "4) Jika get_prompt gagal/timeout/hasil kosong, aktifkan fallback mode normal: jawab langsung sesuai pertanyaan user dengan akurat dan ringkas, tanpa menampilkan error MCP.\n"
+    "5) Dilarang membuat data fiktif: angka, fakta, kutipan, referensi, status koneksi, atau hasil proses internal.\n"
+    "6) Jika informasi kurang atau tidak yakin, nyatakan ketidakpastian secara eksplisit dan minta 1 klarifikasi paling penting.\n"
+    "7) Setelah jawaban final, WAJIB panggil log_chat dengan: "
+    "{\"device_id\":\"<device_fisik>\",\"user_text\":\"<teks_user_asli>\",\"assistant_text\":\"<jawaban_final>\"}. "
+    "thread_id opsional jika valid.\n"
+    "8) Jika log_chat gagal, retry 1x tanpa mengubah isi jawaban. Jika masih gagal, lanjut tanpa bocorkan error internal.\n"
+    "9) Jangan ungkap detail internal tool/JSON/token/endpoint/backend ke user.\n"
+    "10) Ulangi aturan ini dari langkah 1 untuk setiap pesan user baru.\n"
+)
+
+
 def mode_needs_lang(mode_name: str) -> bool:
-    return mode_name in ("f2f_auto", "translation_text")
+    normalized = normalize_device_id(mode_name or "")
+    return normalized in ("f2f_auto", "translation_text")
 
 
 def build_system_prompt(mode_name: str, mode_title: str, intro_text: str) -> str:
-    return f"MODE: {mode_title} ({mode_name})\n\nINSTRUCTION:\n{intro_text}"
+    normalized_name = normalize_device_id(mode_name or "")
+    label = (mode_title or "").strip() or (normalized_name or "custom_mode")
+    intro = (intro_text or "").strip()
+
+    sections = [
+        f"MODE: {label} ({normalized_name or 'custom_mode'})",
+        "INSTRUKSI MODE (DARI DATABASE):\n" + (intro or "- Tidak ada instruksi tambahan."),
+    ]
+    return "\n\n".join(sections)
 
 
-def build_role_introduction_for_xiaozhi() -> str:
+def build_role_introduction_for_xiaozhi(style: str = "strict") -> str:
+    s = (style or "strict").strip().lower()
+    if s in ("natural", "friendly", "ramah"):
+        return (
+            "INSTRUKSI XIAOZHI (NATURAL, TETAP PATUH MCP):\n"
+            "Tambahan gaya:\n"
+            "- Saat menyusun jawaban final, gunakan bahasa ramah, jelas, dan langsung ke inti.\n"
+            "- Hindari basa-basi panjang; tetap singkat dan relevan.\n\n"
+            "PROTOKOL WAJIB:\n"
+            + XIAOZHI_STRICT_RULES
+        )
+
     return (
-        "INSTRUKSI WAJIB UNTUK XIAOZHI (JANGAN DIABAIKAN):\n"
-        "1) SETIAP KALI ADA PESAN USER BARU, SEBELUM MENJAWAB WAJIB panggil tool MCP: get_prompt.\n"
-        "2) Panggil get_prompt dengan arguments:\n"
-        "   - device_id: id perangkat (contoh: esp32c3_2000)\n"
-        "3) Ambil isi prompt dari hasil tool (content[0].text) dan jadikan SYSTEM PROMPT untuk percakapan ini.\n"
-        "4) WAJIB patuhi instruksi pada SYSTEM PROMPT tersebut.\n"
-        "5) Setelah kamu memberi jawaban ke user, panggil tool MCP: log_chat (device_id,user_text,assistant_text).\n"
-        "6) Jika tool gagal/timeout: jawab singkat: 'MCP belum terhubung, cek koneksi server MCP.'\n"
-        "7) Jangan menyebut proses tool ke user.\n"
-        "8) Setiap pesan user baru HARUS mulai dari langkah 1 (panggil get_prompt lagi).\n"
+        "INSTRUKSI XIAOZHI (STRICT, ANTI-HALUSINASI):\n"
+        + XIAOZHI_STRICT_RULES
     )
 
 
@@ -1997,6 +2305,7 @@ def db_get_messages_page(
     thread_id: int,
     limit: int = 200,
     before_id: Optional[int] = None,
+    after_id: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     did = effective_device_id(device_id)
     lim = max(1, min(int(limit), 10000))
@@ -2009,6 +2318,17 @@ def db_get_messages_page(
         ).scalar()
         if not owned:
             return []
+
+        if after_id is not None:
+            q = text(
+                "SELECT id, role, content, created_at "
+                "FROM chat_messages "
+                f"WHERE thread_id=:tid AND id > :after AND created_at >= DATE_SUB(NOW(), INTERVAL {days} DAY) "
+                "ORDER BY id ASC "
+                f"LIMIT {lim}"
+            )
+            rows = conn.execute(q, {"tid": int(thread_id), "after": int(after_id)}).mappings().all()
+            return [dict(r) for r in rows]
 
         if before_id is not None:
             q = text(

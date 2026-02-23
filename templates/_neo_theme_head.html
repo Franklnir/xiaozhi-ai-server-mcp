@@ -1,0 +1,367 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --neo-bg: #ffd43b;
+    --neo-bg-2: #ffcc1f;
+    --neo-paper: #fff9ee;
+    --neo-paper-2: #fff4d2;
+    --neo-ink: #111111;
+    --neo-accent: #73d0ff;
+    --neo-accent-2: #ff8787;
+    --neo-accent-3: #8ce99a;
+    --neo-shadow: 6px 6px 0 var(--neo-ink);
+    --neo-shadow-sm: 3px 3px 0 var(--neo-ink);
+    --neo-radius: 18px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: "Chakra Petch", "Space Grotesk", "Segoe UI", Arial, sans-serif;
+    color: var(--neo-ink) !important;
+    background:
+      radial-gradient(circle at 12px 12px, rgba(0, 0, 0, 0.16) 1.5px, transparent 1.6px) 0 0 / 24px 24px,
+      linear-gradient(125deg, var(--neo-bg) 0%, var(--neo-bg) 60%, var(--neo-bg-2) 100%);
+    min-height: 100vh;
+    position: relative;
+  }
+
+  body::before,
+  body::after {
+    content: "";
+    pointer-events: none;
+    position: fixed;
+    z-index: 0;
+    border: 3px solid var(--neo-ink);
+    box-shadow: var(--neo-shadow);
+    opacity: 0.9;
+  }
+
+  body::before {
+    width: 320px;
+    height: 320px;
+    top: -120px;
+    right: -78px;
+    background: var(--neo-accent);
+    transform: rotate(12deg);
+  }
+
+  body::after {
+    width: 220px;
+    height: 220px;
+    left: -65px;
+    bottom: -92px;
+    background: var(--neo-accent-2);
+    border-radius: 999px;
+  }
+
+  body > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  [class*="max-w-"][class*="mx-auto"] {
+    animation: neo-in 0.45s ease both;
+  }
+
+  @keyframes neo-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  a {
+    color: var(--neo-ink);
+  }
+
+  a:hover {
+    opacity: 0.88;
+  }
+
+  .bg-white\/10,
+  .bg-white\/15,
+  .bg-black\/30,
+  .bg-black\/25,
+  .bg-black\/20,
+  .bg-black\/15,
+  .bg-black\/40,
+  .bg-white\/5,
+  .bg-slate-950\/70,
+  .bg-slate-900\/60,
+  .bg-slate-800,
+  .bg-slate-700,
+  .bg-slate-800\/80,
+  .bg-slate-700\/80 {
+    background: var(--neo-paper) !important;
+  }
+
+  .hover\:bg-white\/15:hover,
+  .hover\:bg-black\/25:hover,
+  .hover\:bg-slate-700:hover,
+  .hover\:bg-slate-800:hover {
+    background: #fff4cc !important;
+  }
+
+  .backdrop-blur,
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg {
+    backdrop-filter: none !important;
+  }
+
+  [class*="border-white"],
+  [class*="border-slate"],
+  [class*="border-blue"],
+  [class*="border-cyan"],
+  [class*="border-emerald"],
+  [class*="border-red"],
+  [class*="border-amber"],
+  [class*="border-purple"] {
+    border-color: var(--neo-ink) !important;
+    border-width: 2px !important;
+  }
+
+  .rounded-2xl,
+  .rounded-xl,
+  .rounded-lg {
+    border-radius: var(--neo-radius) !important;
+  }
+
+  .rounded-full {
+    border-radius: 999px !important;
+  }
+
+  header {
+    border-color: var(--neo-ink) !important;
+    border-bottom-width: 3px !important;
+    background: var(--neo-paper) !important;
+  }
+
+  .card,
+  details,
+  table,
+  .chat-shell,
+  .tg-shell,
+  .admin-nav-link {
+    border: 2px solid var(--neo-ink) !important;
+    box-shadow: var(--neo-shadow-sm) !important;
+  }
+
+  button,
+  .btn,
+  .admin-nav-link,
+  [type="submit"],
+  [type="button"] {
+    border: 2px solid var(--neo-ink) !important;
+    box-shadow: var(--neo-shadow-sm) !important;
+    color: var(--neo-ink) !important;
+    font-weight: 700 !important;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+  }
+
+  button:hover,
+  .btn:hover,
+  .admin-nav-link:hover,
+  [type="submit"]:hover,
+  [type="button"]:hover {
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0 var(--neo-ink) !important;
+    filter: saturate(1.04);
+  }
+
+  button:disabled,
+  .btn:disabled {
+    opacity: 0.65;
+    transform: none !important;
+    box-shadow: none !important;
+    cursor: not-allowed;
+  }
+
+  .bg-blue-600,
+  .bg-blue-500\/15,
+  .bg-blue-500\/10,
+  .bg-cyan-600,
+  .bg-cyan-600\/80 {
+    background: var(--neo-accent) !important;
+  }
+
+  .bg-emerald-600,
+  .bg-emerald-500\/15,
+  .bg-emerald-500\/10 {
+    background: var(--neo-accent-3) !important;
+  }
+
+  .bg-amber-600,
+  .bg-amber-500\/15 {
+    background: #ffe066 !important;
+  }
+
+  .bg-red-600,
+  .bg-red-700,
+  .bg-red-500\/15,
+  .bg-red-500\/10 {
+    background: var(--neo-accent-2) !important;
+  }
+
+  .bg-purple-500\/10 {
+    background: #ffc9de !important;
+  }
+
+  input,
+  textarea,
+  select,
+  .inp {
+    background: #fffdf7 !important;
+    color: var(--neo-ink) !important;
+    border: 2px solid var(--neo-ink) !important;
+    border-radius: 14px !important;
+    box-shadow: var(--neo-shadow-sm) !important;
+    outline: none !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #5a5a5a;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus,
+  .inp:focus {
+    box-shadow: 0 0 0 3px rgba(115, 208, 255, 0.4), var(--neo-shadow-sm) !important;
+  }
+
+  table {
+    background: var(--neo-paper) !important;
+  }
+
+  thead {
+    background: var(--neo-paper-2) !important;
+  }
+
+  tbody tr:nth-child(odd) {
+    background: #fffef8;
+  }
+
+  tbody tr:nth-child(even) {
+    background: #fff7e4;
+  }
+
+  [class*="text-white"],
+  [class*="text-slate"],
+  .muted {
+    color: var(--neo-ink) !important;
+  }
+
+  [class*="text-blue-"],
+  [class*="text-cyan-"] {
+    color: #0f5a8d !important;
+  }
+
+  [class*="text-emerald-"] {
+    color: #1f6b3b !important;
+  }
+
+  [class*="text-amber-"] {
+    color: #7a5800 !important;
+  }
+
+  [class*="text-red-"] {
+    color: #8f1f1f !important;
+  }
+
+  [class*="text-purple-"] {
+    color: #58356b !important;
+  }
+
+  .chip {
+    background: #fff8d2 !important;
+    border: 2px solid var(--neo-ink) !important;
+    box-shadow: var(--neo-shadow-sm) !important;
+    color: var(--neo-ink) !important;
+    font-weight: 700;
+  }
+
+  .font-mono {
+    font-family: "Space Grotesk", Consolas, "Courier New", monospace !important;
+    letter-spacing: 0.01em;
+  }
+
+  #toastBox > div {
+    background: #fffef8 !important;
+    color: var(--neo-ink) !important;
+    border: 2px solid var(--neo-ink) !important;
+    box-shadow: var(--neo-shadow) !important;
+  }
+
+  summary {
+    font-weight: 700;
+  }
+
+  details[open] summary {
+    margin-bottom: 0.6rem;
+  }
+
+  .chat-shell,
+  .tg-shell {
+    background:
+      radial-gradient(circle at 9px 9px, rgba(0, 0, 0, 0.11) 1px, transparent 1.2px) 0 0 / 20px 20px,
+      #fffef8 !important;
+    border: 2px solid var(--neo-ink) !important;
+  }
+
+  .msg-bubble,
+  .tg-bubble {
+    border: 2px solid var(--neo-ink) !important;
+    box-shadow: var(--neo-shadow-sm) !important;
+    background: #ffebc1 !important;
+    color: var(--neo-ink) !important;
+  }
+
+  .msg-row.user .msg-bubble,
+  .tg-row.user .tg-bubble {
+    background: #b7e3ff !important;
+  }
+
+  .msg-row.assistant .msg-bubble,
+  .tg-row.assistant .tg-bubble {
+    background: #ffd4a9 !important;
+  }
+
+  .msg-avatar,
+  .tg-avatar {
+    background: #fffef8 !important;
+    border: 2px solid var(--neo-ink) !important;
+    box-shadow: var(--neo-shadow-sm) !important;
+    color: var(--neo-ink) !important;
+  }
+
+  @media (max-width: 900px) {
+    body::before {
+      width: 230px;
+      height: 230px;
+      top: -90px;
+      right: -96px;
+    }
+
+    body::after {
+      width: 165px;
+      height: 165px;
+      left: -70px;
+      bottom: -72px;
+    }
+  }
+</style>

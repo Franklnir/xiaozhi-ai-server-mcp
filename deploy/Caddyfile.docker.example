@@ -1,0 +1,12 @@
+xiaozhiscig.biz.id {
+    encode gzip zstd
+
+    @health path /healthz
+    handle @health {
+        reverse_proxy api:8000
+    }
+
+    handle {
+        reverse_proxy api:8000
+    }
+}

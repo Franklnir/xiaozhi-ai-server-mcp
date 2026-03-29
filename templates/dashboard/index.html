@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SciG Mode Dashboard - Realtime</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <style>
+    :root{
+      --bg:#0a1224;
+      --panel:rgba(15,23,42,.78);
+      --panel-border:rgba(255,255,255,.10);
+      --muted:#94a3b8;
+      --accent:#3b82f6;
+    }
+    body{
+      font-family:"Space Grotesk",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(1200px 700px at 15% -10%, rgba(37,99,235,.35), transparent 60%),
+        radial-gradient(900px 600px at 85% 10%, rgba(20,184,166,.25), transparent 55%),
+        var(--bg);
+      color:#e5e7eb;
+    }
+    .card{background:var(--panel);border:1px solid var(--panel-border);border-radius:1rem}
+    .inp{background:rgba(2,6,23,.7);border:1px solid rgba(255,255,255,.10);border-radius:.75rem;padding:.6rem .75rem;width:100%}
+    .btn{border-radius:.75rem;padding:.55rem .9rem;font-weight:700}
+    .muted{color:var(--muted)}
+    .chip{border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:.2rem .6rem;font-size:12px}
+    .thin{scrollbar-width:thin}
+
+    /* Telegram-like chat */
+    .chat-shell{
+      background:
+        radial-gradient(circle at 12px 12px, rgba(148,163,184,.14) 1px, transparent 1px),
+        radial-gradient(circle at 4px 4px, rgba(148,163,184,.10) 1px, transparent 1px),
+        #eef2f7;
+      background-size: 24px 24px, 12px 12px;
+      border:1px solid #dbe3ee;
+      border-radius:18px;
+    }
+    .msg-row{display:flex;gap:10px;margin:12px 0;align-items:flex-end}
+    .msg-row.user{justify-content:flex-end}
+    .msg-row.assistant{justify-content:flex-start}
+    .msg-avatar{
+      width:28px;height:28px;border-radius:999px;
+      display:flex;align-items:center;justify-content:center;
+      background:#c7d2fe;color:#1e1b4b;font-weight:700;font-size:12px;
+      box-shadow:0 2px 6px rgba(15,23,42,.12);
+    }
+    .msg-bubble{
+      max-width:74%;
+      padding:10px 12px;
+      white-space:pre-wrap;word-break:break-word;
+      box-shadow:0 6px 16px rgba(15,23,42,.08);
+      border:1px solid transparent;
+    }
+    .msg-row.user .msg-bubble{
+      background:#d7f0ff;border-color:#b6ddff;border-radius:16px 16px 6px 16px;
+    }
+    .msg-row.assistant .msg-bubble{
+      background:#ffffff;border-color:#e2e8f0;border-radius:16px 16px 16px 6px;
+    }
+    .msg-name{font-weight:600;font-size:11px;color:#334155;margin-bottom:4px}
+    .msg-meta{margin-top:6px;font-size:10px;color:#64748b;text-align:right}
+  </style>
+</head>
+
+<body class="min-h-screen">
+  <!-- Top bar -->
+  <header class="sticky top-0 z-10 border-b border-white/10 bg-slate-950/70 backdrop-blur">
+    <div class="max-w-[1500px] w-full mx-auto px-4 py-4 flex items-center justify-between gap-3">
+      <div>
+        <h1 class="text-xl md:text-2xl font-extrabold text-blue-300">
+          SciG Mode Dashboard <span class="chip ml-2 text-emerald-200 bg-emerald-500/10">REALTIME</span>
+        </h1>
+        <div class="text-xs muted mt-1">PSID hanya: default + psid_1..psid_4. Device lain masuk "default".</div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div id="wsStatus" class="chip bg-slate-900/60 text-slate-200">WS: Connecting...</div>
+        <div class="text-sm text-slate-200">{{ username }}</div>
+        <a href="/download" class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-sm">📱 Download App</a>
+        <a href="/logout" class="btn bg-red-600 hover:bg-red-500 text-white text-sm">Logout</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1500px] w-full mx-auto p-4 md:p-8 space-y-6">
+
+    <!-- Quick info -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="card p-4">
+        <div class="text-sm font-bold">Routing</div>
+        <div class="text-xs muted mt-1">Terakhir physical device & PSID aktif.</div>
+        <div class="mt-3 space-y-2 text-sm">
+          <div class="flex items-center justify-between">
+            <span class="muted">Last Physical</span>
+            <span class="font-mono text-xs" id="lastPhysical">-</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="muted">Active PSID</span>
+            <span class="font-mono text-xs" id="activePsid">-</span>
+          </div>
+        </div>
+        <button class="mt-4 btn bg-slate-800 hover:bg-slate-700 text-white w-full text-sm" onclick="refreshAll()">
+          Refresh
+        </button>
+
+        <div class="mt-4 border-t border-white/10 pt-4">
+          <div class="text-xs muted mb-2">Tips</div>
+          <div class="text-xs text-slate-300">
+            Kalau Xiaozhi sudah connect tapi PSID salah, set PSID lalu apply mode. Server akan auto-route last physical ke PSID.
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-4 md:col-span-2">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-sm font-bold">🔗 Xiaozhi MCP Endpoint</div>
+            <div class="text-xs muted mt-1">
+              Hubungkan server ini ke Xiaozhi AI — kelola token, test koneksi, dan pantau status real-time.
+            </div>
+          </div>
+          <div class="chip bg-blue-500/10 text-blue-200">MCP Manager</div>
+        </div>
+
+        <!-- Setup Guide -->
+        <div class="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-500/5 p-4">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-base">📖</span>
+            <span class="text-sm font-bold text-cyan-200">Cara Mendapatkan MCP Endpoint dari Xiaozhi.me</span>
+          </div>
+          <ol class="text-xs text-slate-300 space-y-1.5 ml-6 list-decimal">
+            <li>Login ke <a href="https://xiaozhi.me" target="_blank" rel="noopener" class="text-cyan-300 underline hover:text-cyan-100">xiaozhi.me</a> → masuk ke Console / Dashboard</li>
+            <li>Buka konfigurasi <strong class="text-white">Smart Agent (智能体)</strong> yang ingin dihubungkan</li>
+            <li>Di halaman <strong class="text-white">Role Config (角色配置)</strong>, lihat bagian <strong class="text-white">kanan bawah</strong></li>
+            <li>Copy URL <strong class="text-white">MCP Endpoint</strong> — formatnya: <code class="bg-black/40 px-1 rounded text-[11px]">wss://api.xiaozhi.me/mcp/?token=XXXX</code></li>
+            <li>Paste URL tersebut ke <strong class="text-white">Token Manager</strong> di bawah, lalu <strong class="text-white">Test → Simpan</strong></li>
+          </ol>
+          <div class="mt-3 text-[11px] text-slate-400">
+            ⚠️ Setiap smart agent punya MCP endpoint sendiri (token unik). Jika token berubah di xiaozhi.me, update juga di sini.
+          </div>
+        </div>
+
+        <div class="mt-4 border-t border-white/10 pt-4">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <div class="flex items-center justify-between">
+                <div class="text-sm font-bold">My Codes</div>
+                <button class="btn bg-slate-800 hover:bg-slate-700 text-white text-sm" onclick="loadMyCodes()">Reload</button>
+              </div>
+              <div id="myCodes" class="mt-3 space-y-2 text-sm"></div>
+            </div>
+
+            <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div class="text-sm font-bold">Token Manager</div>
+              <div class="text-xs muted mt-1">Test koneksi dulu sebelum simpan. Satu token = satu code.</div>
+
+              <div class="mt-3">
+                <label class="text-xs muted">Code Aktif</label>
+                <select id="myCodeSelect" class="inp text-sm mt-1"></select>
+              </div>
+
+              <div class="mt-3">
+                <label class="text-xs muted">Token / WS URL (dari xiaozhi.me)</label>
+                <textarea id="myTokenInput" rows="4" class="inp text-sm mt-1" placeholder="wss://api.xiaozhi.me/mcp/?token=..."></textarea>
+              </div>
+
+              <div id="myTokenStatus" class="mt-3 text-xs text-slate-300">Belum dites.</div>
+
+              <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
+                <button class="btn bg-slate-800 hover:bg-slate-700 text-white text-sm" onclick="testMyToken()">🔌 Test Connect</button>
+                <button class="btn bg-cyan-600 hover:bg-cyan-500 text-white text-sm" onclick="saveMyToken()">💾 Simpan Token</button>
+                <button class="btn bg-red-600 hover:bg-red-500 text-white text-sm" onclick="clearMyToken()">🗑️ Hapus Token</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card p-4">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <div class="text-sm font-bold">Media Sosial</div>
+          <div class="text-xs muted mt-1">Link resmi dari admin (klik untuk membuka).</div>
+        </div>
+        <div class="chip bg-slate-500/10 text-slate-200">User</div>
+      </div>
+      <div id="socialLinksUser" class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm"></div>
+    </section>
+
+    <!-- Mode + Language -->
+    <section class="card p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-sm font-bold">Mode & Language (per PSID)</div>
+          <div class="text-xs muted mt-1">Pilih PSID yang mau kamu kontrol, lalu set mode dan bahasa.</div>
+        </div>
+        <div class="chip bg-purple-500/10 text-purple-200">Per-Device</div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label class="text-xs muted">PSID (otomatis dari mode)</label>
+          <select id="psidSelect" class="inp text-sm" disabled></select>
+          <div class="text-[11px] muted mt-1">PSID tidak bisa dipilih manual. Ikuti mode.</div>
+        </div>
+
+        <div>
+          <label class="text-xs muted">Mode</label>
+          <select id="modeSelect" class="inp text-sm"></select>
+        </div>
+
+        <div class="flex items-end gap-2">
+          <button class="btn bg-blue-600 hover:bg-blue-500 text-white w-full" onclick="applyMode()">
+            Apply Mode
+          </button>
+        </div>
+
+        <div id="langPanel" class="md:col-span-3 hidden">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+            <div>
+              <label class="text-xs muted">Source</label>
+              <select id="srcLang" class="inp text-sm"></select>
+            </div>
+            <div>
+              <label class="text-xs muted">Target</label>
+              <select id="tgtLang" class="inp text-sm"></select>
+            </div>
+            <div class="flex items-end">
+              <button class="btn bg-emerald-600 hover:bg-emerald-500 text-white w-full" onclick="saveLang()">
+                Save Language
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <div class="flex items-center justify-between">
+          <div class="text-xs muted">Rendered System Prompt (preview)</div>
+          <button class="btn bg-slate-800 hover:bg-slate-700 text-white text-sm" onclick="previewPrompt()">Preview</button>
+        </div>
+        <pre id="promptPreview" class="mt-2 p-3 rounded-xl bg-black/40 border border-white/10 text-xs overflow-auto max-h-56 thin"></pre>
+      </div>
+    </section>
+
+    <!-- Perangkat Saya -->
+    <section class="card p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-sm font-bold">Monitoring HP Dipindah ke APK Mobile</div>
+          <div class="text-xs muted mt-1">Lokasi, baterai, jaringan, dan pairing device sekarang hanya bisa diakses dari aplikasi mobile xiaozhiscig.</div>
+        </div>
+        <div class="chip bg-slate-700/60 text-slate-200">Mobile Only</div>
+      </div>
+
+      <div class="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/80">
+        Website tidak lagi menampilkan data HP. Untuk tracking perangkat, buka menu perangkat di APK mobile.
+      </div>
+    </section>
+
+    <!-- Mode Editor -->
+    <section class="card p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-sm font-bold">Mode Editor</div>
+          <div class="text-xs muted mt-1">
+            Edit title & introduction.
+            (Kalau mau profesional: batasi API edit mode hanya untuk admin.)
+          </div>
+        </div>
+        <div class="chip bg-amber-500/10 text-amber-200">Editor</div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label class="text-xs muted">Pilih Mode</label>
+          <select id="modeEditSelect" class="inp text-sm" onchange="pickModeToEdit()"></select>
+        </div>
+
+        <div>
+          <label class="text-xs muted">Name</label>
+          <input id="modeEditName" class="inp text-sm font-mono" placeholder="mode_name" />
+          <div class="text-[11px] muted mt-1">Untuk mode existing, jangan ubah name kalau tidak perlu.</div>
+        </div>
+
+        <div>
+          <label class="text-xs muted">Title</label>
+          <input id="modeEditTitle" class="inp text-sm" placeholder="Judul mode" />
+        </div>
+
+        <div class="md:col-span-3">
+          <label class="text-xs muted">Introduction</label>
+          <textarea id="modeEditIntro" rows="6" class="inp text-sm font-mono" placeholder="Isi prompt peran / aturan..."></textarea>
+        </div>
+
+        <div class="md:col-span-3 flex gap-2">
+          <button class="btn bg-slate-800 hover:bg-slate-700 text-white text-sm" onclick="newModeDraft()">+ Draft Mode Baru</button>
+          <button class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-sm" onclick="saveModeEdit()">Save Mode</button>
+        </div>
+
+        <div class="md:col-span-3 text-sm" id="modeEditStatus"></div>
+      </div>
+    </section>
+
+    <!-- Chat -->
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <!-- Threads -->
+      <div class="card p-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm font-bold">Threads</div>
+            <div class="text-xs muted mt-1">List chat untuk PSID terpilih.</div>
+          </div>
+        </div>
+
+        <div class="mt-3 flex items-center gap-2">
+          <button class="btn bg-slate-800 hover:bg-slate-700 text-white text-sm w-full" onclick="loadThreads()">
+            Reload Threads
+          </button>
+        </div>
+
+        <div id="threads" class="mt-3 space-y-2 max-h-[520px] overflow-auto pr-1 thin"></div>
+      </div>
+
+      <!-- Messages -->
+      <div class="card p-4 xl:col-span-2">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <div class="text-sm font-bold">Messages</div>
+            <div class="text-xs muted mt-1 flex flex-wrap items-center gap-2">
+              <span>Thread: <span class="font-mono text-xs" id="activeThread">-</span></span>
+              <span class="chip bg-slate-900/60" id="chatPsidBadge">PSID: -</span>
+              <span class="chip bg-slate-900/60" id="modeBadge">Mode: -</span>
+              <span class="chip bg-slate-900/60" id="threadModeBadge">Thread Mode: -</span>
+            </div>
+          </div>
+          <div class="text-xs muted">Realtime view (30 hari terakhir)</div>
+        </div>
+
+        <div id="messages" class="mt-4 max-h-[640px] overflow-auto pr-1 thin chat-shell p-3"></div>
+
+        <div class="mt-4 border-t border-white/10 pt-4">
+          <div class="text-xs muted">Tampilan ini hanya untuk memantau realtime chat Xiaozhi.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- small toast -->
+  <div id="toastBox" class="fixed bottom-4 left-1/2 -translate-x-1/2 space-y-2 z-50"></div>
+
+<script>
+  // ------------------------
+  // State
+  // ------------------------
+  let WS = null;
+  let wsTimer = null;
+
+  let CONFIG = null;
+  let MODES = [];
+  let MODE_PSID_MAP = {};
+  let CURRENT_PSID = "default";
+  let ACTIVE_MODE = null;
+  let AUTO_SYNC_PSID = true;
+  let AUTO_FOLLOW_THREAD = true;
+
+  let THREADS = [];
+  let ACTIVE_THREAD_ID = null;
+  let ACTIVE_THREAD_MODE = null;
+
+  let SUPPRESS_MODE_CHANGE = false;
+
+  let TRACKED_DEVICES = [];
+  let ACTIVE_TRACKED_DEVICE = null;
+  let DEVICE_MAP = null;
+  let DEVICE_MARKERS = [];
+  let DEVICE_REFRESH_TIMER = null;
+  let MY_CODES = [];
+  let MY_TOKEN_TEST_OK = false;
+
+  // ------------------------
+  // Helpers
+  // ------------------------
+  const $ = (id) => document.getElementById(id);
+
+  async function api(url, opts = {}) {
+    const o = Object.assign({
+      credentials: "include",
+      headers: {"Content-Type": "application/json"},
+    }, opts);
+
+    const res = await fetch(url, o);
+    const ct = (res.headers.get("content-type") || "");
+    const data = ct.includes("application/json") ? await res.json() : await res.text();
+
+    if (!res.ok) {
+      const msg =
+        (data && data.error) ? data.error :
+        (data && data.detail) ? data.detail :
+        (typeof data === "string" ? data : "Request failed");
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  function setStatus(text, ok=null) {
+    const el = $("wsStatus");
+    el.textContent = text;
+    el.className = "chip " + (ok === true ? "bg-emerald-500/10 text-emerald-200" : ok === false ? "bg-red-500/10 text-red-200" : "bg-slate-900/60 text-slate-200");
+  }
+
+  function escapeHtml(s) {
+    const div = document.createElement("div");
+    div.textContent = s ?? "";
+    return div.innerHTML;
+  }
+
+  function needsLang(modeName) {
+    return modeName === "f2f_auto" || modeName === "translation_text";
+  }
+
+  function toast(msg, ok=true) {
+    const box = $("toastBox");
+    const el = document.createElement("div");
+    el.className = "px-3 py-2 rounded-xl border text-sm shadow-lg backdrop-blur " +
+      (ok ? "bg-emerald-500/10 border-emerald-400/20 text-emerald-100" : "bg-red-500/10 border-red-400/20 text-red-100");
+    el.innerHTML = msg;
+    box.appendChild(el);
+    setTimeout(() => { try { el.remove(); } catch(e){} }, 2400);
+  }
+
+  // token display intentionally hidden in dashboard
+
+  async function loadSocialLinks() {
+    const wrap = $("socialLinksUser");
+    if (!wrap) return;
+    wrap.innerHTML = `<div class="text-xs muted">Memuat...</div>`;
+    try {
+      const data = await api("/api/public/settings", { credentials: "include" });
+      const links = data.social_links || [];
+      if (!links.length) {
+        wrap.innerHTML = `<div class="text-xs muted">Belum ada link.</div>`;
+        return;
+      }
+      wrap.innerHTML = "";
+      links.forEach((l) => {
+        const card = document.createElement("a");
+        card.href = l.url;
+        card.target = "_blank";
+        card.rel = "noopener noreferrer";
+        card.className = "block px-3 py-2 rounded-xl border border-white/10 bg-black/20 hover:bg-black/30 transition";
+        card.innerHTML = `
+          <div class="text-sm font-semibold">${escapeHtml(l.label || "Link")}</div>
+          <div class="text-xs muted mt-1">${escapeHtml(l.url || "")}</div>
+        `;
+        wrap.appendChild(card);
+      });
+    } catch (e) {
+      wrap.innerHTML = `<div class="text-xs text-red-200">Gagal memuat link.</div>`;
+    }
+  }
+
+  // ------------------------
+  // Device Tracking
+  // ------------------------
+  function formatBytes(v) {
+    if (!v && v !== 0) return "-";
+    const n = Number(v);
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  }
+
+  function initDeviceMap() {
+    if (DEVICE_MAP) return;
+    DEVICE_MAP = L.map("deviceMap").setView([0, 0], 2);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(DEVICE_MAP);
+  }
+
+  function renderDeviceMap() {
+    initDeviceMap();
+    DEVICE_MARKERS.forEach(m => m.remove());
+    DEVICE_MARKERS = [];
+
+    const candidates = (TRACKED_DEVICES || []).filter(d => d.latitude && d.longitude);
+    if (candidates.length === 0) return;
+
+    const focus = ACTIVE_TRACKED_DEVICE && ACTIVE_TRACKED_DEVICE.latitude
+      ? [ACTIVE_TRACKED_DEVICE.latitude, ACTIVE_TRACKED_DEVICE.longitude]
+      : [candidates[0].latitude, candidates[0].longitude];
+
+    DEVICE_MAP.setView(focus, 13);
+    candidates.forEach(d => {
+      const name = d.alias || d.device_name || d.device_id;
+      const addr = d.address_full || [d.address_street, d.address_area, d.address_city].filter(Boolean).join(", ");
+      const marker = L.marker([d.latitude, d.longitude]).addTo(DEVICE_MAP);
+      marker.bindPopup(`<b>${escapeHtml(name)}</b><br>${escapeHtml(addr || "-")}`);
+      marker.on("click", () => selectTrackedDevice(d.device_id));
+      DEVICE_MARKERS.push(marker);
+    });
+  }
+
+  function renderDeviceList() {
+    const wrap = $("deviceList");
+    wrap.innerHTML = "";
+    if (!TRACKED_DEVICES || TRACKED_DEVICES.length === 0) {
+      wrap.innerHTML = `<div class="text-xs muted">Belum ada device. Tambah via QR token.</div>`;
+      return;
+    }
+
+    TRACKED_DEVICES.forEach(d => {
+      const name = d.alias || d.device_name || d.device_id;
+      const online = !!d.is_online;
+      const addr = d.address_full || [d.address_street, d.address_area, d.address_city].filter(Boolean).join(", ");
+      const card = document.createElement("div");
+      card.className = "p-3 rounded-xl border border-white/10 bg-black/20 cursor-pointer hover:bg-black/30 transition";
+      card.innerHTML = `
+        <div class="flex items-center justify-between gap-2">
+          <div class="font-semibold text-sm">${escapeHtml(name)}</div>
+          <div class="text-xs ${online ? "text-emerald-200" : "text-amber-200"}">
+            ${online ? "Online" : "Offline"}
+          </div>
+        </div>
+        <div class="text-xs muted mt-1">${escapeHtml(addr || "-")}</div>
+      `;
+      card.onclick = () => selectTrackedDevice(d.device_id);
+      wrap.appendChild(card);
+    });
+  }
+
+  function renderDeviceDetail() {
+    const box = $("deviceDetail");
+    if (!ACTIVE_TRACKED_DEVICE) {
+      box.textContent = "Pilih device untuk lihat detail.";
+      return;
+    }
+    const d = ACTIVE_TRACKED_DEVICE;
+    const name = d.alias || d.device_name || d.device_id;
+    const addr = d.address_full || [d.address_street, d.address_area, d.address_city].filter(Boolean).join(", ");
+    const battery = (d.battery_level || d.battery_level === 0) ? `${d.battery_level}%` : "-";
+    box.innerHTML = `
+      <div class="flex items-center justify-between gap-2">
+        <div class="font-semibold">${escapeHtml(name)}</div>
+        <div class="text-xs ${d.is_online ? "text-emerald-200" : "text-amber-200"}">${d.is_online ? "Online" : "Offline"}</div>
+      </div>
+      <div class="text-xs muted mt-1">${escapeHtml(addr || "-")}</div>
+      <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div><span class="muted">Baterai:</span> ${escapeHtml(battery)} (${escapeHtml(d.battery_status || "-")})</div>
+        <div><span class="muted">Charging:</span> ${escapeHtml(d.charging_type || "-")}</div>
+        <div><span class="muted">Suhu:</span> ${escapeHtml(d.battery_temp ? `${d.battery_temp}°C` : "-")}</div>
+        <div><span class="muted">Jaringan:</span> ${escapeHtml(d.network_type || "-")} / ${escapeHtml(d.carrier || "-")}</div>
+        <div><span class="muted">RAM:</span> ${escapeHtml(formatBytes(d.ram_used))} / ${escapeHtml(formatBytes(d.ram_total))}</div>
+        <div><span class="muted">Storage:</span> ${escapeHtml(formatBytes(d.storage_used))} / ${escapeHtml(formatBytes(d.storage_total))}</div>
+      </div>
+    `;
+  }
+
+  function selectTrackedDevice(deviceId) {
+    ACTIVE_TRACKED_DEVICE = TRACKED_DEVICES.find(d => d.device_id === deviceId) || null;
+    renderDeviceList();
+    renderDeviceDetail();
+    renderDeviceMap();
+    previewPrompt().catch(() => {});
+  }
+
+  async function loadDevices() {
+    TRACKED_DEVICES = [];
+    ACTIVE_TRACKED_DEVICE = null;
+  }
+
+  async function claimPairToken() {
+    toast("Data HP sekarang hanya bisa dikelola dari aplikasi mobile.", false);
+  }
+
+  function startDeviceRefresh() {
+    if (DEVICE_REFRESH_TIMER) clearInterval(DEVICE_REFRESH_TIMER);
+  }
+
+  // ------------------------
+  // WebSocket
+  // ------------------------
+  function connectWS() {
+    try { if (WS) WS.close(); } catch(e){}
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    WS = new WebSocket(`${proto}://${location.host}/ws`);
+
+    WS.onopen = () => {
+      setStatus("WS: Connected", true);
+      if (wsTimer) clearInterval(wsTimer);
+      wsTimer = setInterval(() => {
+        try { WS.send("ping"); } catch(e){}
+      }, 8000);
+    };
+
+    WS.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        handleRealtime(msg);
+      } catch(e) {}
+    };
+
+    WS.onclose = () => {
+      setStatus("WS: Disconnected", false);
+      if (wsTimer) clearInterval(wsTimer);
+      setTimeout(connectWS, 1200);
+    };
+
+    WS.onerror = () => {
+      setStatus("WS: Error", false);
+    };
+  }
+
+  function handleRealtime(msg) {
+    if (!msg || !msg.type) return;
+
+    if (msg.type === "chat_message_sent") {
+      if (msg.device_id === CURRENT_PSID) {
+        if (AUTO_FOLLOW_THREAD && msg.thread_id && msg.thread_id !== ACTIVE_THREAD_ID) {
+          selectThread(msg.thread_id).catch(() => {});
+          return;
+        }
+        if (msg.thread_id === ACTIVE_THREAD_ID) {
+          loadMessages({ replace: true, keepBottom: true });
+        }
+        loadThreads();
+      }
+    }
+
+    if (msg.type === "chat_created" || msg.type === "chat_deleted") {
+      if (msg.device_id === CURRENT_PSID) loadThreads();
+    }
+
+    if (msg.type === "active_mode_changed") {
+      if (msg.device_id === CURRENT_PSID) loadActiveMode();
+      if (AUTO_SYNC_PSID) syncPsidFromActive(msg.device_id).catch(() => {});
+    }
+
+    if (msg.type === "device_settings_changed") {
+      if (msg.device_id === CURRENT_PSID) loadDeviceSettings();
+    }
+
+    if (msg.type === "route_changed") {
+      loadLastDevice();
+    }
+
+    if (msg.type === "modes_updated") {
+      loadModes().then(() => {
+        loadActiveMode();
+        previewPrompt();
+      });
+    }
+
+    if (msg.type === "device_status_updated") return;
+  }
+
+  // ------------------------
+  // Boot
+  // ------------------------
+  async function boot() {
+    connectWS();
+    await loadConfig();
+    fillPsids();
+    fillLanguages();
+    $("chatPsidBadge").textContent = `PSID: ${CURRENT_PSID}`;
+    await loadSocialLinks();
+    await loadLastDevice();
+    await loadModes();
+    await loadActiveMode();
+    await loadDeviceSettings();
+    await loadDevices();
+    startDeviceRefresh();
+    await loadMyCodes();
+    await loadThreads();
+    await previewPrompt();
+  }
+
+  async function refreshAll() {
+    await loadSocialLinks();
+    await loadLastDevice();
+    await loadModes();
+    await loadActiveMode();
+    await loadDeviceSettings();
+    await loadDevices();
+    await loadMyCodes();
+    await loadThreads();
+    await previewPrompt();
+  }
+
+  async function loadConfig() {
+    CONFIG = await api("/api/config");
+
+    // fallback safety
+    CONFIG.psids = CONFIG.psids || ["default","psid_1","psid_2","psid_3","psid_4"];
+    CONFIG.languages = CONFIG.languages || ["Indonesia","Arab","Inggris"];
+    MODE_PSID_MAP = CONFIG.mode_psid_map || {};
+
+    const saved = localStorage.getItem("scig_psid");
+    if (saved && CONFIG.psids.includes(saved)) CURRENT_PSID = saved;
+  }
+
+  function fillPsids() {
+    const sel = $("psidSelect");
+    sel.innerHTML = "";
+    (CONFIG.psids || ["default","psid_1","psid_2","psid_3","psid_4"]).forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p;
+      opt.textContent = p;
+      sel.appendChild(opt);
+    });
+    sel.value = CURRENT_PSID;
+  }
+
+  async function syncPsidFromActive(activePsid) {
+    if (!AUTO_SYNC_PSID) return;
+    if (!activePsid) return;
+    if (!CONFIG?.psids || !CONFIG.psids.includes(activePsid)) return;
+    if (activePsid === CURRENT_PSID) return;
+
+    CURRENT_PSID = activePsid;
+    localStorage.setItem("scig_psid", CURRENT_PSID);
+    if ($("psidSelect")) $("psidSelect").value = CURRENT_PSID;
+    await onPsidChanged();
+  }
+
+  function fillLanguages() {
+    const langs = CONFIG.languages || [];
+    const src = $("srcLang"), tgt = $("tgtLang");
+    src.innerHTML = ""; tgt.innerHTML = "";
+    langs.forEach(l => {
+      const o1 = document.createElement("option");
+      o1.value = l; o1.textContent = l;
+      src.appendChild(o1);
+
+      const o2 = document.createElement("option");
+      o2.value = l; o2.textContent = l;
+      tgt.appendChild(o2);
+    });
+  }
+
+  async function loadLastDevice() {
+    const d = await api("/api/last-device");
+    $("lastPhysical").textContent = d.last_physical_device_id || "-";
+    $("activePsid").textContent = d.active_psid || "-";
+    await syncPsidFromActive(d.active_psid);
+  }
+
+  async function loadModes() {
+    MODES = await api("/api/modes");
+
+    const sel = $("modeSelect");
+    sel.innerHTML = "";
+    MODES.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m.id;
+      opt.textContent = `${m.title}  [${m.name}]`;
+      sel.appendChild(opt);
+    });
+
+    const ed = $("modeEditSelect");
+    ed.innerHTML = "";
+    MODES.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m.id;
+      opt.textContent = `${m.name}`;
+      ed.appendChild(opt);
+    });
+
+    if (MODES.length) {
+      ed.value = String(MODES[0].id);
+      pickModeToEdit();
+    }
+  }
+
+  async function loadActiveMode() {
+    ACTIVE_MODE = await api(`/api/mode?device_id=${encodeURIComponent(CURRENT_PSID)}`);
+    $("modeBadge").textContent = `Mode: ${ACTIVE_MODE?.title || ACTIVE_MODE?.name || "-"}`;
+
+    if (ACTIVE_MODE && $("modeSelect")) {
+      SUPPRESS_MODE_CHANGE = true;
+      $("modeSelect").value = String(ACTIVE_MODE.id || "");
+      SUPPRESS_MODE_CHANGE = false;
+    }
+
+    $("langPanel").classList.toggle("hidden", !needsLang(ACTIVE_MODE?.name || ""));
+    updateSendState();
+  }
+
+  async function loadDeviceSettings() {
+    const st = await api(`/api/device/settings?device_id=${encodeURIComponent(CURRENT_PSID)}`);
+    if ($("srcLang")) $("srcLang").value = st.source || "Indonesia";
+    if ($("tgtLang")) $("tgtLang").value = st.target || "Arab";
+  }
+
+  function updateSendState() {
+    const isNormal = (ACTIVE_MODE?.name || "") === "normal";
+    const btn = $("sendBtn");
+    const hint = $("sendHint");
+    if (btn) {
+      btn.disabled = !isNormal;
+      btn.classList.toggle("opacity-50", !isNormal);
+      btn.classList.toggle("cursor-not-allowed", !isNormal);
+    }
+    if (hint) {
+      hint.textContent = isNormal ? "OK, mode NORMAL. Pesan akan diproses LLM provider." : "Send dikunci: hanya boleh saat mode NORMAL.";
+    }
+  }
+
+  async function onPsidChanged() {
+    CURRENT_PSID = $("psidSelect").value;
+    localStorage.setItem("scig_psid", CURRENT_PSID);
+
+    ACTIVE_THREAD_ID = null;
+    ACTIVE_THREAD_MODE = null;
+    $("activeThread").textContent = "-";
+    $("threadModeBadge").textContent = "Thread Mode: -";
+    $("chatPsidBadge").textContent = `PSID: ${CURRENT_PSID}`;
+    $("messages").innerHTML = "";
+
+    await loadActiveMode();
+    await loadDeviceSettings();
+    await loadThreads();
+    await previewPrompt();
+  }
+
+  async function applyMode() {
+    const modeId = parseInt($("modeSelect").value, 10);
+    try {
+      const res = await api("/api/mode", {method:"POST", body: JSON.stringify({device_id: CURRENT_PSID, mode_id: modeId})});
+      await loadActiveMode();
+      await previewPrompt();
+      await loadLastDevice();
+      toast(`OK Mode updated: <b>${escapeHtml(res.title || res.name || "OK")}</b>`, true);
+    } catch(e) {
+      toast(`ERR ${escapeHtml(e.message)}`, false);
+    }
+  }
+
+  async function saveLang() {
+    try {
+      const source = $("srcLang").value;
+      const target = $("tgtLang").value;
+      await api("/api/device/settings", {method:"POST", body: JSON.stringify({device_id: CURRENT_PSID, source, target})});
+      await previewPrompt();
+      toast("OK Language saved", true);
+    } catch(e) {
+      toast(`ERR ${escapeHtml(e.message)}`, false);
+    }
+  }
+
+  async function previewPrompt() {
+    try {
+      const vars = {
+        source: $("srcLang")?.value || "Indonesia",
+        target: $("tgtLang")?.value || "Arab"
+      };
+      const out = await api("/api/render-prompt", {
+        method:"POST",
+        body: JSON.stringify({
+          mode_id: ACTIVE_MODE?.id || null,
+          vars,
+          device_id: ACTIVE_TRACKED_DEVICE?.device_id || null
+        })
+      });
+      $("promptPreview").textContent = out.prompt || "";
+    } catch(e) {
+      $("promptPreview").textContent = `Error: ${e.message}`;
+    }
+  }
+
+  function resetMyTokenStatus(text = "Belum dites.", ok = null) {
+    MY_TOKEN_TEST_OK = ok === true;
+    const el = $("myTokenStatus");
+    if (!el) return;
+    el.textContent = text;
+    el.className = "mt-3 text-xs " + (ok === true ? "text-emerald-200" : ok === false ? "text-red-200" : "text-slate-300");
+  }
+
+  function renderMyCodeSelect() {
+    const sel = $("myCodeSelect");
+    if (!sel) return;
+    sel.innerHTML = "";
+
+    const createOpt = document.createElement("option");
+    createOpt.value = "";
+    createOpt.textContent = "Buat code baru";
+    sel.appendChild(createOpt);
+
+    MY_CODES.forEach((c) => {
+      const opt = document.createElement("option");
+      opt.value = String(c.id);
+      opt.textContent = `${c.code} ${c.is_connected ? "(connected)" : ""}`;
+      sel.appendChild(opt);
+    });
+  }
+
+  async function testMyToken() {
+    const token = ($("myTokenInput").value || "").trim();
+    if (!token) {
+      resetMyTokenStatus("Token/URL kosong.", false);
+      return;
+    }
+    resetMyTokenStatus("Testing...", null);
+    try {
+      const res = await api("/api/mcp/test-token", { method: "POST", body: JSON.stringify({ token }) });
+      resetMyTokenStatus(res.ok ? "Connected." : "Gagal connect.", !!res.ok);
+    } catch (e) {
+      resetMyTokenStatus(`Error: ${e.message}`, false);
+    }
+  }
+
+  async function saveMyToken() {
+    if (!MY_TOKEN_TEST_OK) {
+      resetMyTokenStatus("Test koneksi dulu sebelum simpan.", false);
+      return;
+    }
+    const token = ($("myTokenInput").value || "").trim();
+    const codeId = ($("myCodeSelect").value || "").trim();
+    try {
+      if (codeId) {
+        await api("/api/mcp/my-codes/update", {
+          method: "POST",
+          body: JSON.stringify({ code_id: parseInt(codeId, 10), token }),
+        });
+        toast("OK Token diperbarui", true);
+      } else {
+        const created = await api("/api/mcp/my-codes/create", {
+          method: "POST",
+          body: JSON.stringify({ token }),
+        });
+        toast(`OK Code baru dibuat: ${escapeHtml(created.code || "-")}`, true);
+      }
+      $("myTokenInput").value = "";
+      resetMyTokenStatus("Tersimpan.", true);
+      await loadMyCodes();
+    } catch (e) {
+      resetMyTokenStatus(`Error: ${e.message}`, false);
+    }
+  }
+
+  async function clearMyToken() {
+    const codeId = ($("myCodeSelect").value || "").trim();
+    if (!codeId) {
+      resetMyTokenStatus("Pilih code yang ingin dihapus tokennya.", false);
+      return;
+    }
+    try {
+      await api("/api/mcp/my-codes/clear", {
+        method: "POST",
+        body: JSON.stringify({ code_id: parseInt(codeId, 10) }),
+      });
+      toast("OK Token dihapus", true);
+      $("myTokenInput").value = "";
+      resetMyTokenStatus("Token dihapus.", true);
+      await loadMyCodes();
+    } catch (e) {
+      resetMyTokenStatus(`Error: ${e.message}`, false);
+    }
+  }
+
+  // ------------------------
+  // My MCP Codes
+  // ------------------------
+  async function loadMyCodes() {
+    const list = await api("/api/mcp/my-codes");
+    MY_CODES = list || [];
+    const wrap = $("myCodes");
+    wrap.innerHTML = "";
+    renderMyCodeSelect();
+
+    if (!list || list.length === 0) {
+      wrap.innerHTML = `<div class="text-xs muted">Belum ada code yang kamu miliki.</div>`;
+      return;
+    }
+
+    list.forEach((c) => {
+      const ok = !!c.is_connected;
+      const box = document.createElement("div");
+      box.className = "p-3 rounded-xl border " + (ok ? "border-emerald-400/20 bg-emerald-500/5" : "border-white/10 bg-black/20");
+
+      const lastOk = c.last_ok_at ? `Last OK: ${escapeHtml(String(c.last_ok_at))}` : "";
+      const lastErr = c.last_err_at ? `Last Err: ${escapeHtml(String(c.last_err_at))}` : "";
+      const hasToken = c.has_token ? "Token ✓" : "No Token";
+
+      box.innerHTML = `
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full ${ok ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]" : "bg-red-400"}"></div>
+            <div class="font-mono text-sm">${escapeHtml(c.code)}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="chip text-[10px] ${c.has_token ? "bg-cyan-500/10 text-cyan-200" : "bg-slate-500/10 text-slate-300"}">${hasToken}</div>
+            <div class="text-xs font-semibold ${ok ? "text-emerald-200" : "text-red-200"}">
+              ${ok ? "🟢 Connected" : "🔴 Disconnected"}
+            </div>
+          </div>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-3 text-[10px] text-slate-400">
+          ${lastOk ? `<span>${lastOk}</span>` : ""}
+          ${lastErr ? `<span>${lastErr}</span>` : ""}
+        </div>
+        ${c.last_error ? `<div class="mt-2 text-[11px] text-red-300 truncate" title="${escapeHtml(c.last_error)}">⚠️ ${escapeHtml(c.last_error)}</div>` : ``}
+      `;
+
+      wrap.appendChild(box);
+    });
+  }
+
+  // ------------------------
+  // Mode Editor
+  // ------------------------
+  function pickModeToEdit() {
+    const id = parseInt($("modeEditSelect").value, 10);
+    const m = MODES.find(x => x.id === id);
+    if (!m) return;
+
+    $("modeEditName").value = m.name || "";
+    $("modeEditTitle").value = m.title || "";
+    $("modeEditIntro").value = m.introduction || "";
+    $("modeEditStatus").innerHTML = `<span class="text-xs muted">Editing: <span class="font-mono">${escapeHtml(m.name)}</span></span>`;
+  }
+
+  function newModeDraft() {
+    $("modeEditName").value = "custom_mode";
+    $("modeEditTitle").value = "Custom Mode";
+    $("modeEditIntro").value = "PERAN: ...\nGAYA: ...\nATURAN:\n- ...";
+    $("modeEditStatus").innerHTML = `<span class="text-xs muted">Draft mode baru siap. Tinggal Save.</span>`;
+  }
+
+  async function saveModeEdit() {
+    const name = ($("modeEditName").value || "").trim();
+    const title = ($("modeEditTitle").value || "").trim();
+    const introduction = ($("modeEditIntro").value || "").trim();
+
+    if (!name || !title || !introduction) {
+      $("modeEditStatus").innerHTML = `<span class="text-red-200 text-sm">ERR name/title/introduction wajib diisi</span>`;
+      return;
+    }
+
+    try {
+      await api("/api/modes", {method:"POST", body: JSON.stringify({name, title, introduction})});
+      $("modeEditStatus").innerHTML = `<span class="text-emerald-200 text-sm">OK Saved</span>`;
+      toast("OK Mode tersimpan", true);
+      await loadModes();
+      await loadActiveMode();
+      await previewPrompt();
+    } catch(e) {
+      $("modeEditStatus").innerHTML = `<span class="text-red-200 text-sm">ERR ${escapeHtml(e.message)}</span>`;
+      toast("ERR " + escapeHtml(e.message), false);
+    }
+  }
+
+  // ------------------------
+  // Threads & Messages
+  // ------------------------
+  async function loadThreads() {
+    const threads = await api(`/api/chats?device_id=${encodeURIComponent(CURRENT_PSID)}`);
+    THREADS = threads || [];
+    const wrap = $("threads");
+    wrap.innerHTML = "";
+
+    if (THREADS.length === 0) {
+      wrap.innerHTML = `<div class="text-xs muted">Belum ada thread.</div>`;
+      return;
+    }
+
+    THREADS.forEach(t => {
+      const active = (t.id === ACTIVE_THREAD_ID);
+      const btn = document.createElement("button");
+      btn.className =
+        "w-full text-left p-3 rounded-xl border border-white/10 " +
+        (active ? "bg-blue-500/15" : "bg-black/15 hover:bg-black/25");
+      btn.onclick = () => selectThread(t.id);
+      const modeLabel = (t.mode_title || t.mode_name || "-");
+      btn.innerHTML = `
+        <div class="text-sm font-semibold truncate">${escapeHtml(t.title || "New Chat")}</div>
+        <div class="text-xs muted mt-1">#${escapeHtml(String(t.id))} - updated ${escapeHtml(String(t.updated_at || ""))}</div>
+        <div class="text-[11px] muted mt-1">mode: ${escapeHtml(String(modeLabel))}</div>
+      `;
+      wrap.appendChild(btn);
+    });
+
+    if (!ACTIVE_THREAD_ID && THREADS.length > 0) {
+      await selectThread(THREADS[0].id);
+    }
+
+    if (ACTIVE_THREAD_ID) {
+      const t = THREADS.find(x => x.id === ACTIVE_THREAD_ID);
+      if (t) {
+        ACTIVE_THREAD_MODE = t.mode_title || t.mode_name || null;
+        $("threadModeBadge").textContent = `Thread Mode: ${ACTIVE_THREAD_MODE || "-"}`;
+      }
+    }
+  }
+
+  async function newChat() {
+    try {
+      const r = await api("/api/chats/new", {method:"POST", body: JSON.stringify({device_id: CURRENT_PSID})});
+      await loadThreads();
+      await selectThread(r.id);
+      toast(`OK New thread #${r.id}`, true);
+    } catch(e) {
+      toast(`ERR ${escapeHtml(e.message)}`, false);
+    }
+  }
+
+  async function selectThread(id) {
+    ACTIVE_THREAD_ID = id;
+    $("activeThread").textContent = String(id);
+    ACTIVE_THREAD_MODE = null;
+    const t = THREADS.find(x => x.id === id);
+    if (t) {
+      ACTIVE_THREAD_MODE = t.mode_title || t.mode_name || null;
+    }
+    $("threadModeBadge").textContent = `Thread Mode: ${ACTIVE_THREAD_MODE || "-"}`;
+
+    await loadThreads();
+    await loadMessages({ replace: true, keepBottom: true });
+  }
+
+  function renderOneMessage(m) {
+    const role = m.role || "unknown";
+    const content = m.content || "";
+    const ts = m.created_at ? String(m.created_at) : "";
+
+    const row = document.createElement("div");
+    row.className = "msg-row " + (role === "user" ? "user" : "assistant");
+
+    const bubble = document.createElement("div");
+    bubble.className = "msg-bubble";
+
+    const label = (role === "assistant") ? "Xiaozhi" : "User";
+
+    bubble.innerHTML = `
+      <div class="msg-name">${escapeHtml(label)}</div>
+      <div class="text-sm text-slate-800">${escapeHtml(content)}</div>
+      <div class="msg-meta">${escapeHtml(ts)}</div>
+    `;
+
+    if (role === "assistant") {
+      const avatar = document.createElement("div");
+      avatar.className = "msg-avatar";
+      avatar.textContent = "X";
+      row.appendChild(avatar);
+    }
+
+    row.appendChild(bubble);
+    return row;
+  }
+
+  async function loadMessages({ replace=false, keepBottom=false } = {}) {
+    if (!ACTIVE_THREAD_ID) return;
+
+    const wrap = $("messages");
+    const msgs = await api(`/api/chats/${ACTIVE_THREAD_ID}/messages?device_id=${encodeURIComponent(CURRENT_PSID)}&limit=10000`);
+    const filtered = (msgs || []).filter(m => m.role === "user" || m.role === "assistant");
+
+    if (replace) wrap.innerHTML = "";
+
+    if (!msgs || msgs.length === 0) {
+      if (replace) wrap.innerHTML = `<div class="text-xs muted">Belum ada pesan.</div>`;
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    filtered.forEach(m => frag.appendChild(renderOneMessage(m)));
+    wrap.appendChild(frag);
+    if (keepBottom) wrap.scrollTop = wrap.scrollHeight;
+
+    if (filtered.length === 0 && replace) {
+      wrap.innerHTML = `<div class="text-xs muted">Belum ada pesan user/assistant.</div>`;
+    }
+  }
+
+  window.addEventListener("load", () => {
+    const modeSel = $("modeSelect");
+    if (modeSel) {
+      modeSel.addEventListener("change", async () => {
+        if (SUPPRESS_MODE_CHANGE) return;
+        const selectedModeId = parseInt(modeSel.value, 10);
+        const mode = MODES.find(m => m.id === selectedModeId);
+        const mappedPsid = mode && MODE_PSID_MAP[mode.name] ? MODE_PSID_MAP[mode.name] : "default";
+        if (mappedPsid !== CURRENT_PSID) {
+          CURRENT_PSID = mappedPsid;
+          $("psidSelect").value = CURRENT_PSID;
+          await onPsidChanged();
+          SUPPRESS_MODE_CHANGE = true;
+          $("modeSelect").value = String(selectedModeId);
+          SUPPRESS_MODE_CHANGE = false;
+        }
+        await applyMode();
+      });
+    }
+
+    const myCodeSelect = $("myCodeSelect");
+    if (myCodeSelect) {
+      myCodeSelect.addEventListener("change", () => {
+        $("myTokenInput").value = "";
+        resetMyTokenStatus("Belum dites.", null);
+      });
+    }
+
+    boot().catch(err => {
+      console.error(err);
+      toast("ERR Gagal boot dashboard: " + escapeHtml(err.message), false);
+    });
+  });
+</script>
+
+</body>
+</html>

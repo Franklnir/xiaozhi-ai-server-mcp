@@ -1,0 +1,13 @@
+node_modules/
+.gradle/
+build/
+android/app/build/
+android/local.properties
+ios/Pods/
+*.apk
+*.aab
+*.ipa
+.env
+.env.local
+*.log
+.metro-health-check*

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Download {{ app_name }}</title>
+  <meta name="description" content="Download {{ app_name }} untuk kontrol AI Xiaozhi dari smartphone Anda." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{
+      --bg:#0a1224;
+      --panel:rgba(15,23,42,.78);
+      --panel-border:rgba(255,255,255,.10);
+      --muted:#94a3b8;
+      --accent:#3b82f6;
+    }
+    body{
+      font-family:"Space Grotesk",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(1200px 700px at 15% -10%, rgba(37,99,235,.35), transparent 60%),
+        radial-gradient(900px 600px at 85% 10%, rgba(20,184,166,.25), transparent 55%),
+        var(--bg);
+      color:#e5e7eb;
+      min-height:100vh;
+    }
+    .card{background:var(--panel);border:1px solid var(--panel-border);border-radius:1rem}
+    .muted{color:var(--muted)}
+    .chip{border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:.2rem .6rem;font-size:12px}
+    .btn{border-radius:.75rem;padding:.55rem .9rem;font-weight:700}
+
+    /* Glass effect */
+    .glass-card{
+      background:rgba(15,23,42,.55);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:1.5rem;
+      backdrop-filter:blur(24px);
+      -webkit-backdrop-filter:blur(24px);
+    }
+
+    /* Glow button */
+    .glow-btn{
+      position:relative;
+      overflow:hidden;
+      transition:all .3s ease;
+    }
+    .glow-btn::before{
+      content:'';
+      position:absolute;
+      top:50%;left:50%;
+      width:0;height:0;
+      background:rgba(255,255,255,.15);
+      border-radius:50%;
+      transform:translate(-50%,-50%);
+      transition:width .6s ease, height .6s ease;
+    }
+    .glow-btn:hover::before{
+      width:400px;height:400px;
+    }
+    .glow-btn:hover{
+      transform:translateY(-2px);
+      box-shadow:0 8px 32px rgba(59,130,246,.35);
+    }
+
+    /* Float animation */
+    @keyframes float{
+      0%,100%{transform:translateY(0)}
+      50%{transform:translateY(-12px)}
+    }
+    .float-anim{animation:float 3s ease-in-out infinite}
+
+    /* QR container */
+    #qrcode{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      background:#fff;
+      border-radius:16px;
+      box-shadow:0 8px 32px rgba(0,0,0,.25);
+    }
+
+    /* Pulse ring */
+    @keyframes pulse-ring{
+      0%{transform:scale(1);opacity:.6}
+      100%{transform:scale(1.5);opacity:0}
+    }
+    .pulse-ring{
+      position:absolute;
+      width:100%;height:100%;
+      border:3px solid rgba(59,130,246,.4);
+      border-radius:16px;
+      animation:pulse-ring 2s ease-out infinite;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Top bar -->
+  <header class="sticky top-0 z-10 border-b border-white/10 bg-slate-950/70 backdrop-blur">
+    <div class="max-w-[1200px] w-full mx-auto px-4 py-4 flex items-center justify-between gap-3">
+      <div>
+        <h1 class="text-xl md:text-2xl font-extrabold text-blue-300">
+          {{ app_name }}
+        </h1>
+        <div class="text-xs muted mt-1">Xiaozhi AI Controller</div>
+      </div>
+
+      <nav class="flex items-center gap-3">
+        <a href="/login" class="btn bg-slate-800 hover:bg-slate-700 text-white text-sm">Login</a>
+        <a href="/download" class="btn bg-blue-600 hover:bg-blue-500 text-white text-sm">📱 Download App</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-[900px] w-full mx-auto px-4 py-12 md:py-20">
+
+    <!-- Hero Section -->
+    <section class="text-center mb-16">
+      <div class="inline-flex items-center gap-2 chip bg-blue-500/10 text-blue-200 mb-6">
+        <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+        Available Now
+      </div>
+      <h2 class="text-3xl md:text-5xl font-extrabold leading-tight mb-4">
+        Kontrol <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-300">Xiaozhi AI</span><br>
+        dari Smartphone Anda
+      </h2>
+      <p class="text-lg muted max-w-lg mx-auto">
+        Download aplikasi mobile {{ app_name }} untuk mengatur mode, memantau chat, dan mengelola perangkat AI Anda kapan saja, di mana saja.
+      </p>
+    </section>
+
+    <!-- Download Card -->
+    <section class="glass-card p-8 md:p-12 mb-12">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+
+        <!-- Left: QR Code -->
+        <div class="flex flex-col items-center gap-6">
+          <div class="text-sm font-bold text-white/80 mb-2">📷 Scan QR Code</div>
+          <div class="relative inline-block">
+            <div class="pulse-ring"></div>
+            <div id="qrcode" class="float-anim"></div>
+          </div>
+          <div class="text-xs muted text-center mt-2">
+            Scan dengan kamera smartphone untuk langsung ke halaman download.
+          </div>
+        </div>
+
+        <!-- Right: Download info -->
+        <div class="flex flex-col gap-6">
+          <div>
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-teal-400 flex items-center justify-center text-2xl shadow-lg shadow-blue-500/20">
+                📱
+              </div>
+              <div>
+                <div class="text-lg font-bold">{{ app_name }}</div>
+                <div class="text-xs muted">Android v{{ app_version }}</div>
+              </div>
+            </div>
+            <p class="text-sm text-white/70 leading-relaxed">
+              Aplikasi mobile resmi untuk mengontrol AI Xiaozhi. Login dengan akun yang sama, kelola mode persona, pantau chat realtime, dan banyak lagi.
+            </p>
+          </div>
+
+          <div class="space-y-3">
+            <div class="flex items-center gap-3 text-sm">
+              <span class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-300">✓</span>
+              <span>Login aman dengan akun yang sama seperti web</span>
+            </div>
+            <div class="flex items-center gap-3 text-sm">
+              <span class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-300">✓</span>
+              <span>Kontrol mode & persona AI</span>
+            </div>
+            <div class="flex items-center gap-3 text-sm">
+              <span class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-300">✓</span>
+              <span>Monitor chat Xiaozhi realtime</span>
+            </div>
+            <div class="flex items-center gap-3 text-sm">
+              <span class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-300">✓</span>
+              <span>Komunikasi HTTPS terenkripsi</span>
+            </div>
+          </div>
+
+          <a id="downloadBtn"
+             href="{{ apk_url }}"
+             target="_blank"
+             rel="noopener noreferrer"
+             class="glow-btn btn bg-gradient-to-r from-blue-600 to-blue-500 text-white text-center text-lg w-full py-4 mt-2">
+            ⬇️ Download {{ app_name }} v{{ app_version }}
+          </a>
+
+          <div class="text-xs muted text-center">
+            Platform: Android 8.0+ &bull; Sumber: {{ 'Server lokal' if is_local_apk else 'GitHub Releases' }}
+          </div>
+          <div class="text-xs muted text-center">
+            Backend APK ini: {{ backend_url }}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Install Guide -->
+    <section class="glass-card p-8 mb-12">
+      <h3 class="text-lg font-bold mb-6 text-center">📋 Cara Install</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="text-center">
+          <div class="w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-400/30 mx-auto flex items-center justify-center text-xl mb-3">1</div>
+          <div class="text-sm font-semibold mb-1">Download APK</div>
+          <div class="text-xs muted">Klik tombol download atau scan QR code di atas</div>
+        </div>
+        <div class="text-center">
+          <div class="w-12 h-12 rounded-2xl bg-teal-500/15 border border-teal-400/30 mx-auto flex items-center justify-center text-xl mb-3">2</div>
+          <div class="text-sm font-semibold mb-1">Izinkan Install</div>
+          <div class="text-xs muted">Buka Settings → Izinkan install dari sumber tidak dikenal</div>
+        </div>
+        <div class="text-center">
+          <div class="w-12 h-12 rounded-2xl bg-purple-500/15 border border-purple-400/30 mx-auto flex items-center justify-center text-xl mb-3">3</div>
+          <div class="text-sm font-semibold mb-1">Login & Gunakan</div>
+          <div class="text-xs muted">Masuk dengan akun web Anda dan mulai kontrol Xiaozhi</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs muted py-8">
+      &copy; 2026 {{ app_name }} &bull; Powered by Xiaozhi AI
+    </footer>
+  </main>
+
+  <!-- QR Code Library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script>
+    const APK_URL = "{{ apk_url }}";
+
+    // Generate QR Code
+    document.addEventListener("DOMContentLoaded", function() {
+      if (typeof QRCode !== "undefined") {
+        new QRCode(document.getElementById("qrcode"), {
+          text: APK_URL,
+          width: 180,
+          height: 180,
+          colorDark: "#0f172a",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H,
+        });
+      }
+    });
+  </script>
+</body>
+</html>

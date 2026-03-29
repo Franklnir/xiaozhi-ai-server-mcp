@@ -21,3 +21,6 @@ __pycache__/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Mobile app punya repo sendiri
+xiaozhi-ai-mobile-mcp-main/
